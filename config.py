@@ -52,7 +52,7 @@ TENDER_SITES = [
     {
         "name": "SSP Hyderabad",
         "type": "unit",
-        "url": "https://ssphyderabad.spmcil.com/en/latest-tenders/"
+        "url": "https://spphyderabad.spmcil.com/en/latest-tenders/"
     }
 ]
 
