@@ -127,11 +127,23 @@ def main():
 
         print("\nCompleted Successfully.")
 
+        return {
+            "success": True,
+            "total_scraped": len(all_tenders),
+            "new_tenders": len(new_tenders),
+            "matched_tenders": len(filtered_tenders)
+        }
+
     except Exception as e:
 
         logger.exception(e)
 
         print(f"\nApplication Failed : {e}")
+
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 if __name__ == "__main__":
