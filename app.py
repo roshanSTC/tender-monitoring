@@ -1,3 +1,5 @@
+from threading import Thread
+
 from flask import Flask, jsonify
 from main import main
 from config import logger
@@ -26,68 +28,31 @@ def run():
 
     global running
 
-    print("\n" + "=" * 70)
-    print("Tender Monitor API Triggered")
-    print("=" * 70)
-
     if running:
-
-        print("Another scraper instance is already running.")
-
-        logger.warning("Scraper already running.")
-
         return jsonify({
             "success": False,
             "message": "Scraper is already running."
         }), 409
 
-    try:
+    def background_job():
+        global running
 
-        running = True
+        try:
+            running = True
+            logger.info("Background job started.")
+            main()
+            logger.info("Background job completed.")
+        except Exception as e:
+            logger.exception(e)
+        finally:
+            running = False
 
-        print("Starting Tender Monitoring Process...\n")
+    Thread(target=background_job, daemon=True).start()
 
-        logger.info("Starting Tender Monitoring Process.")
-
-        result = main()
-
-        print("\nTender Monitoring Completed Successfully.")
-
-        print("Summary")
-
-        print(f"Total Scraped        : {result.get('total_scraped', 0)}")
-        print(f"New Tenders          : {result.get('new_tenders', 0)}")
-        print(f"Keyword Matches      : {result.get('matched_tenders', 0)}")
-
-        print("=" * 70)
-
-        logger.info("Tender Monitoring Completed Successfully.")
-
-        return jsonify({
-            "success": True,
-            "result": result
-        })
-
-    except Exception as e:
-
-        print("\nApplication Failed!")
-        print(f"Reason : {e}")
-
-        print("=" * 70)
-
-        logger.exception(e)
-
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
-
-    finally:
-
-        running = False
-
-        print("Scraper Lock Released.")
-        print("=" * 70 + "\n")
+    return jsonify({
+        "success": True,
+        "message": "Tender monitoring started."
+    }), 200
 
 
 if __name__ == "__main__":
