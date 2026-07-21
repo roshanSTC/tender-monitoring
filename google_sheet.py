@@ -101,29 +101,25 @@ class GoogleSheet:
     
     def get_existing_tenders(self):
 
-        values = self.sheet.get_all_values()
+        source_col = self.sheet.col_values(1)
+        tender_col = self.sheet.col_values(3)
 
         existing = set()
 
-        # Skip header
-        for row in values[1:]:
+        for source, tender_no in zip(source_col[1:], tender_col[1:]):
 
-            if len(row) < 3:
-                continue
-
-            source = row[0].strip()
-            tender_no = row[2].strip()
+            source = source.strip()
+            tender_no = tender_no.strip()
 
             if source and tender_no:
-
                 existing.add(f"{source}|{tender_no}")
+
+        print(f"Loaded {len(existing)} existing tenders.")
 
         return existing
     
     
-    def save_to_sheet(self, tenders):
-
-        existing = self.get_existing_tenders()
+    def save_to_sheet(self, tenders, existing):
 
         rows = []
 
@@ -137,7 +133,6 @@ class GoogleSheet:
                 continue
 
             rows.append([
-
                 tender["Source"],
                 tender["Unit Name"],
                 tender["Tender Number"],
@@ -147,13 +142,13 @@ class GoogleSheet:
                 tender["Tender Document URL"],
                 tender["Corrigendum URL"],
                 tender["Scraped At"]
-
             ])
+
+            existing.add(key)
 
             inserted += 1
 
         if rows:
-
             self.sheet.append_rows(rows)
 
         print(f"Inserted {inserted} new tenders.")  
