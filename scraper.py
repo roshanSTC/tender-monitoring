@@ -5,18 +5,15 @@ Scrapes SPMCIL tenders and stores them in an Excel file.
 """
 
 from datetime import datetime
-import os
 from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from openpyxl import Workbook, load_workbook
 from urllib.parse import urljoin
 from config import TENDER_SITES, logger
 
-EXCEL_FILE = "spmcil_tenders.xlsx"
 
 
 class TenderScraper:
@@ -368,35 +365,6 @@ class TenderScraper:
     
     # --------------------------------------------------------
 
-    def create_excel(self):
-
-        if os.path.exists(EXCEL_FILE):
-            return
-
-        wb = Workbook()
-
-        ws = wb.active
-
-        ws.title = "Tenders"
-
-        ws.append([
-            "Source",
-            "Unit Name",
-            "Tender Number",
-            "Tender Title",
-            "Publishing Date",
-            "Closing Date",
-            "Tender Document",
-            "Tender Document URL",
-            "Corrigendum",
-            "Corrigendum URL",
-            "Scraped At"
-        ])
-
-        wb.save(EXCEL_FILE)
-
-        logger.info("Excel created.")
-
     # --------------------------------------------------------
 
     def get_existing_tenders(self):
@@ -422,51 +390,6 @@ class TenderScraper:
         return existing
 
     # --------------------------------------------------------
-
-    def save_to_excel(self, tenders):
-
-        self.create_excel()
-
-        existing = self.get_existing_tenders()
-
-        wb = load_workbook(EXCEL_FILE)
-
-        ws = wb.active
-
-        new_count = 0
-
-        for tender in tenders:
-
-            key = f"{tender['Source']}|{tender['Tender Number']}"
-
-            if key in existing:
-                continue
-
-            ws.append([
-                tender["Source"],
-                tender["Unit Name"],
-                tender["Tender Number"],
-                tender["Tender Title"],
-                tender["Publishing Date"],
-                tender["Closing Date"],
-                tender["Tender Document"],
-                tender["Tender Document URL"],
-                tender["Corrigendum"],
-                tender["Corrigendum URL"],
-                tender["Scraped At"]
-            ])
-            existing.add(key) 
-            
-            new_count += 1
-
-        wb.save(EXCEL_FILE)
-
-        wb.close()
-
-        logger.info(f"{new_count} new tenders inserted.")
-
-        print(f"Inserted {new_count} new tenders into Excel.")
-
     # --------------------------------------------------------
 
     def scrape(self, site):

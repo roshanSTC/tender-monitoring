@@ -8,13 +8,15 @@ from scraper import TenderScraper
 from compare import TenderComparer
 from filter import TenderFilter
 from mailer import TenderMailer
+from google_sheet import GoogleSheet
 from config import logger, TENDER_SITES
+sheet = GoogleSheet()
 
 
 def main():
 
     print("=" * 70)
-    print("        SPMCIL Tender Monitoring System")
+    print("        Tender Monitoring System")
     print("=" * 70)
 
     logger.info("Application Started")
@@ -65,13 +67,13 @@ def main():
         # Create Excel if not exists
         # ---------------------------------------------------
 
-        scraper.create_excel()
+        sheet.create_sheet()
 
         # ---------------------------------------------------
         # Existing tenders
         # ---------------------------------------------------
 
-        existing = scraper.get_existing_tenders()
+        existing = sheet.get_existing_tenders()
 
         print(f"Existing Tenders : {len(existing)}")
 
@@ -91,7 +93,7 @@ def main():
 
         if new_tenders:
 
-            scraper.save_to_excel(new_tenders)
+            sheet.save_to_sheet(new_tenders)
 
             print("Excel updated successfully.")
 
