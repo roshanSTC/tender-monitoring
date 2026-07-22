@@ -24,7 +24,7 @@ class TenderFilter:
 
                 if keyword in title:
 
-                    tender["Matched Keyword"] = keyword
+                    tender["Matched Keyword"] = keyword.upper()
 
                     matched.append(tender)
 

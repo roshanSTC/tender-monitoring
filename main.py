@@ -87,19 +87,7 @@ def main():
 
         print(f"New Tenders : {len(new_tenders)}")
 
-        # ---------------------------------------------------
-        # Save new tenders
-        # ---------------------------------------------------
-
-        if new_tenders:
-
-            sheet.save_to_sheet(new_tenders)
-
-            print("Excel updated successfully.")
-
-        else:
-
-            print("No new tenders found.")
+        
 
         # ---------------------------------------------------
         # Filter
@@ -110,6 +98,21 @@ def main():
         print(
             f"Keyword Matched Tenders : {len(filtered_tenders)}"
         )
+        
+        
+        # ---------------------------------------------------
+        # Save new tenders
+        # ---------------------------------------------------
+
+        if new_tenders:
+
+            sheet.save_to_sheet(new_tenders, existing)
+
+            print("Excel updated successfully.")
+
+        else:
+
+            print("No new tenders found.")
 
         # ---------------------------------------------------
         # Email

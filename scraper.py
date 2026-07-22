@@ -5,6 +5,7 @@ Scrapes SPMCIL tenders and stores them in an Excel file.
 """
 
 from datetime import datetime
+from gc import get_stats
 from urllib.parse import urljoin
 
 import requests
@@ -15,6 +16,30 @@ from urllib.parse import urljoin
 from config import TENDER_SITES, logger
 
 
+from datetime import datetime
+
+
+def get_status(closing_date):
+
+    try:
+        closing = datetime.strptime(
+            closing_date[:10],
+            "%Y-%m-%d"
+        ).date()
+
+        today = datetime.today().date()
+
+        days_left = (closing - today).days
+
+        if days_left < 0:
+            return "Expired", 0
+
+        return "Active", days_left
+
+    except Exception:
+        return "Unknown", 0
+    
+    
 
 class TenderScraper:
 
@@ -60,7 +85,11 @@ class TenderScraper:
 
         return response.text
 
-    # --------------------------------------------------------
+# --------------------------------------------------------
+    
+    
+
+#-----------------------------------------------------
 
     from urllib.parse import urljoin
 
@@ -128,6 +157,10 @@ class TenderScraper:
                     base_url,
                     tender_doc_link.get("href", "")
                 )
+                
+            closing_date = cols[5].get_text(" ", strip=True)
+
+            status, days_left = get_status(closing_date)
 
             tender = {
 
@@ -149,7 +182,11 @@ class TenderScraper:
                     " ",
                     strip=True
                 ),
-
+                
+                "Status": status,
+                
+                "Days Left": days_left,
+                
                 "Corrigendum": corrigendum_text,
 
                 "Corrigendum URL": corrigendum_url,
@@ -222,6 +259,10 @@ class TenderScraper:
                     site["url"],
                     link.get("href", "")
                 )
+                
+            status, days_left = get_status(
+                cols[5].get_text(" ", strip=True)
+            )
 
             tender = {
 
@@ -234,6 +275,10 @@ class TenderScraper:
                 "Publishing Date": cols[4].get_text(" ", strip=True),
 
                 "Closing Date": cols[5].get_text(" ", strip=True),
+                
+                "Status": status,
+
+                "Days Left": days_left,
 
                 "Tender Document": tender_doc,
 

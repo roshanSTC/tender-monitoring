@@ -90,15 +90,19 @@ class TenderMailer:
 
                 <tr style="background:#D9EAD3;">
 
-                    <th>Unit</th>
-
                     <th>Tender Number</th>
 
                     <th>Tender Title</th>
+                    
+                    <th>Keyword</th>
 
                     <th>Publishing Date</th>
 
                     <th>Closing Date</th>
+                    
+                    <th>Status</th>
+                    
+                    <th>Days Left</th>
 
                     <th>Tender Document</th>
 
@@ -132,15 +136,19 @@ class TenderMailer:
                 html += f"""
                 <tr>
 
-                    <td>{tender.get('Unit Name','')}</td>
-
                     <td>{tender.get('Tender Number','')}</td>
 
                     <td>{tender.get('Tender Title','')}</td>
+                    
+                    <td>{tender.get('Matched Keyword','')}</td>
 
                     <td>{tender.get('Publishing Date','')}</td>
 
                     <td>{tender.get('Closing Date','')}</td>
+                    
+                    <td>{tender.get('Status', '')}</td>
+                    
+                    <td>{tender.get('Days Left', '')}</td>
 
                     <td align="center">{tender_doc}</td>
 
