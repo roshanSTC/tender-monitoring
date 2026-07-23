@@ -1,4 +1,4 @@
-from threading import Thread
+
 
 from flask import Flask, jsonify
 from main import main
@@ -34,25 +34,26 @@ def run():
             "message": "Scraper is already running."
         }), 409
 
-    def background_job():
-        global running
+    try:
+        running = True
+        logger.info("Tender monitoring started via API")
 
-        try:
-            running = True
-            logger.info("Background job started.")
-            main()
-            logger.info("Background job completed.")
-        except Exception as e:
-            logger.exception(e)
-        finally:
-            running = False
+        result = main()
 
-    Thread(target=background_job, daemon=True).start()
+        logger.info("Tender monitoring completed")
 
-    return jsonify({
-        "success": True,
-        "message": "Tender monitoring started."
-    }), 200
+        return jsonify(result)
+
+    except Exception as e:
+        logger.exception(e)
+
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+    finally:
+        running = False
 
 
 if __name__ == "__main__":
