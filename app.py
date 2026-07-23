@@ -47,7 +47,7 @@ def run():
         finally:
             running = False
 
-    Thread(target=background_job).start()
+    Thread(target=background_job, daemon=True).start()
 
     return jsonify({
         "success": True,
