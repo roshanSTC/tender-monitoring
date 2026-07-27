@@ -48,6 +48,20 @@ def main():
                 logger.info(
                     f"{site['name']} -> {len(tenders)} tenders scraped"
                 )
+                
+                # Debug only for BRBNMPL
+                if site["name"] == "BRBNMPL":
+
+                    seen = set()
+
+                    for tender in tenders:
+
+                        key = f"{tender['Source']}|{tender['Tender Number']}"
+
+                        if key in seen:
+                            print(f"DUPLICATE FROM PARSER: {key}")
+
+                        seen.add(key)
 
                 all_tenders.extend(tenders)
 

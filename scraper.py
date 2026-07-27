@@ -413,15 +413,15 @@ class TenderScraper:
     def parse_brbnmpl(self, site):
 
         tenders = []
+        seen = set()
 
         response = requests.get(site["url"], timeout=30)
-
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Find all tables
         tables = soup.find_all("table")
+
 
         for table in tables:
 
@@ -430,13 +430,12 @@ class TenderScraper:
             if len(rows) < 2:
                 continue
 
-            # Check header row
             header_text = rows[0].get_text(" ", strip=True).lower()
 
             if "tender no" not in header_text:
                 continue
 
-            # Parse data rows
+
             for row in rows[1:]:
 
                 cols = row.find_all(["td", "th"])
@@ -446,6 +445,16 @@ class TenderScraper:
 
                 tender_no = cols[1].get_text(strip=True)
 
+                if not tender_no:
+                    continue
+
+                key = f"BRBNMPL|{tender_no}"
+
+                if key in seen:
+                    continue
+
+                seen.add(key)
+
                 open_date = cols[2].get_text(strip=True)
 
                 title_col = cols[3]
@@ -454,13 +463,11 @@ class TenderScraper:
 
                 title = title_col.get_text(" ", strip=True)
 
-                # Tender document link
-                link = title_col.find("a")
-
                 tender_url = ""
 
-                if link and link.get("href"):
+                link = title_col.find("a")
 
+                if link and link.get("href"):
                     tender_url = urljoin(site["url"], link["href"])
 
                 tenders.append({
@@ -479,6 +486,10 @@ class TenderScraper:
                     "Scraped At": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 })
+
+            # Stop after parsing the first valid tender table
+            break
+
 
         return tenders
 
