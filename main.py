@@ -127,6 +127,19 @@ def main():
         else:
 
             print("No new tenders found.")
+            
+            
+        # symmary---------------------------
+        
+        summary = {
+                "status": "SUCCESS",
+                "total_websites": len(TENDER_SITES),
+                "total_scraped": len(all_tenders),
+                "existing_tenders": len(existing),
+                "new_tenders": len(new_tenders),
+                "keyword_matches": len(filtered_tenders)
+            }
+
 
         # ---------------------------------------------------
         # Email
@@ -140,7 +153,9 @@ def main():
 
         else:
 
-            print("No keyword matched tenders.")
+            mailer.send_health_report(summary)
+
+            print("Health report sent successfully.")
 
         logger.info("Application Finished Successfully")
 
