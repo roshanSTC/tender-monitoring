@@ -53,6 +53,17 @@ TENDER_SITES = [
         "name": "SSP Hyderabad",
         "type": "unit",
         "url": "https://spphyderabad.spmcil.com/en/latest-tenders/"
+    },
+    {
+        "name": "BRBNMPL",
+        "url": "https://www.brbnmpl.co.in/tender/",
+        "type": "brbnmpl"
+    },
+
+    {
+        "name": "BNPM India",
+        "url": "https://www.bnpmindia.com/ViewActiveTender.aspx",
+        "type": "bnpm"
     }
 ]
 

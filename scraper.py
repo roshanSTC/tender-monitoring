@@ -410,6 +410,168 @@ class TenderScraper:
     
     # --------------------------------------------------------
 
+    def parse_brbnmpl(self, site):
+
+        tenders = []
+
+        response = requests.get(site["url"], timeout=30)
+
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Find all tables
+        tables = soup.find_all("table")
+
+        for table in tables:
+
+            rows = table.find_all("tr")
+
+            if len(rows) < 2:
+                continue
+
+            # Check header row
+            header_text = rows[0].get_text(" ", strip=True).lower()
+
+            if "tender no" not in header_text:
+                continue
+
+            # Parse data rows
+            for row in rows[1:]:
+
+                cols = row.find_all(["td", "th"])
+
+                if len(cols) < 5:
+                    continue
+
+                tender_no = cols[1].get_text(strip=True)
+
+                open_date = cols[2].get_text(strip=True)
+
+                title_col = cols[3]
+
+                closing_date = cols[4].get_text(strip=True)
+
+                title = title_col.get_text(" ", strip=True)
+
+                # Tender document link
+                link = title_col.find("a")
+
+                tender_url = ""
+
+                if link and link.get("href"):
+
+                    tender_url = urljoin(site["url"], link["href"])
+
+                tenders.append({
+
+                    "Source": "BRBNMPL",
+                    "Source URL": site["url"],
+                    "Unit Name": "BRBNMPL",
+                    "Tender Number": tender_no,
+                    "Tender Title": title,
+                    "Publishing Date": open_date,
+                    "Closing Date": closing_date,
+                    "Tender Document": "Download" if tender_url else "",
+                    "Tender Document URL": tender_url,
+                    "Corrigendum": "",
+                    "Corrigendum URL": "",
+                    "Scraped At": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                })
+
+        return tenders
+
+    def parse_bnpm(self, site):
+
+        tenders = []
+
+        response = requests.get(site["url"], timeout=30)
+
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        tables = soup.find_all("table")
+
+        for table in tables:
+
+            rows = table.find_all("tr")
+
+            if len(rows) < 2:
+                continue
+
+            header_text = rows[0].get_text(" ", strip=True).lower()
+
+            if "tender details" not in header_text:
+                continue
+
+            for row in rows[1:]:
+
+                cols = row.find_all("td")
+
+                if len(cols) < 3:
+                    continue
+
+                details_col = cols[0]
+
+                opening_date = cols[1].get_text(strip=True)
+
+                closing_date = cols[2].get_text(strip=True)
+
+                detail_text = details_col.get_text(" ", strip=True)
+
+                # First line is usually tender number/title
+                lines = [l.strip() for l in detail_text.splitlines() if l.strip()]
+
+                tender_no = lines[0] if lines else ""
+
+                title = " ".join(lines[1:]) if len(lines) > 1 else tender_no
+
+                tender_url = ""
+
+                corrigendum_url = ""
+
+                links = details_col.find_all("a")
+
+                for a in links:
+
+                    href = a.get("href")
+
+                    if not href:
+                        continue
+
+                    full_url = urljoin(site["url"], href)
+
+                    text = a.get_text(strip=True).lower()
+
+                    if "corrigendum" in text:
+
+                        corrigendum_url = full_url
+
+                    else:
+
+                        tender_url = full_url
+
+                tenders.append({
+
+                    "Source": "BNPM India",
+                    "Source URL": site["url"],
+                    "Unit Name": "BNPM India",
+                    "Tender Number": tender_no,
+                    "Tender Title": title,
+                    "Publishing Date": opening_date,
+                    "Closing Date": closing_date,
+                    "Tender Document": "Download" if tender_url else "",
+                    "Tender Document URL": tender_url,
+                    "Corrigendum": "Corrigendum" if corrigendum_url else "",
+                    "Corrigendum URL": corrigendum_url,
+                    "Scraped At": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                })
+
+        return tenders
+
     # --------------------------------------------------------
 
     def get_existing_tenders(self):
@@ -446,6 +608,12 @@ class TenderScraper:
 
         elif site["name"] == "IGM Noida":
             tenders = self.parse_noida_page(html, site)
+        
+        elif site["type"] == "brbnmpl":
+            return self.parse_brbnmpl(site)
+
+        elif site["type"] == "bnpm":
+            return self.parse_bnpm(site)
 
         else:
             tenders = self.parse_unit_table(html, site)
