@@ -4,11 +4,13 @@ main.py
 Main entry point for the SPMCIL Tender Monitoring System.
 """
 
-from scraper import TenderScraper
-from compare import TenderComparer
-from filter import TenderFilter
-from mailer import TenderMailer
-from google_sheet import GoogleSheet
+
+from services.active_tenders import count_active_tenders
+from scraper.scraper import TenderScraper
+from services.compare import TenderComparer
+from services.filter import TenderFilter
+from notifications.mailer import TenderMailer
+from storage.google_sheet import GoogleSheet
 from config import logger, TENDER_SITES
 sheet = GoogleSheet()
 
@@ -34,7 +36,8 @@ def main():
         all_tenders = []
 
         print("\nScraping Websites...\n")
-
+        
+        
         for site in TENDER_SITES:
 
             try:
@@ -72,6 +75,8 @@ def main():
                 )
 
                 print(f"Failed : {site['name']}")
+                print(f"Error Type : {type(e).__name__}")
+                print(f"Error      : {e}")
 
         print("\n---------------------------------------")
         print(f"Total Scraped : {len(all_tenders)}")
@@ -129,12 +134,19 @@ def main():
             print("No new tenders found.")
             
             
+            
+        #active tenders-------------------- 
+        
+        active_tenders, expired_tenders = count_active_tenders(
+                all_tenders
+            )   
         # symmary---------------------------
         
         summary = {
                 "status": "SUCCESS",
                 "total_websites": len(TENDER_SITES),
                 "total_scraped": len(all_tenders),
+                "active_tenders": active_tenders,
                 "existing_tenders": len(existing),
                 "new_tenders": len(new_tenders),
                 "keyword_matches": len(filtered_tenders)
@@ -147,7 +159,7 @@ def main():
 
         if filtered_tenders:
 
-            mailer.send_email(filtered_tenders)
+            mailer.send_email(filtered_tenders, summary)
 
             print("Email sent successfully.")
 
