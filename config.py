@@ -55,6 +55,11 @@ TENDER_SITES = [
         "url": "https://spphyderabad.spmcil.com/en/latest-tenders/"
     },
     {
+        "name": "SPM Narmadapuram",
+        "type": "unit",
+        "url": "https://spmnarmadapuram.spmcil.com/en/latest-tenders/"
+    },
+    {
         "name": "BRBNMPL",
         "url": "https://www.brbnmpl.co.in/tender/",
         "type": "brbnmpl"
