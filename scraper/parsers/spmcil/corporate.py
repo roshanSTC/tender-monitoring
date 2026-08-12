@@ -5,6 +5,7 @@ from config import logger
 from bs4 import BeautifulSoup
 
 from utils.status import get_status
+from utils.date_utils import normalize_tender_date
 
 
 
@@ -53,7 +54,7 @@ def  parse_corporate_table( html):
                 )
 
             # -----------------------------
-            # Tender Document
+            # Tender
             # -----------------------------
 
             tender_doc_text = ""
@@ -88,15 +89,15 @@ def  parse_corporate_table( html):
                     strip=True
                 ),
 
-                "Publishing Date": cols[4].get_text(
+                "Publishing Date": normalize_tender_date(cols[4].get_text(
                     " ",
                     strip=True
-                ),
+                )),
 
-                "Closing Date": cols[5].get_text(
+                "Closing Date": normalize_tender_date(cols[5].get_text(
                     " ",
                     strip=True
-                ),
+                )),
                 
                 "Status": status,
                 
@@ -106,13 +107,9 @@ def  parse_corporate_table( html):
 
                 "Corrigendum URL": corrigendum_url,
 
-                "Tender Document": tender_doc_text,
+                "Tender": tender_doc_text,
 
-                "Tender Document URL": tender_doc_url,
-
-                "Scraped At": datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
+                "Tender URL": tender_doc_url
             }
 
             tenders.append(tender)

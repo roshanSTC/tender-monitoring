@@ -72,9 +72,8 @@ class GoogleSheet:
             "Matched Keyword",
             "Publishing Date",
             "Closing Date",
-            "Tender Document URL",
-            "Corrigendum URL",
-            "Scraped At"
+            "Tender URL",
+            "Corrigendum URL"
         ]
 
         values = self.sheet.get_all_values()
@@ -141,12 +140,11 @@ class GoogleSheet:
                 tender.get("Matched Keyword", "-"),
                 tender["Publishing Date"],
                 tender["Closing Date"],
-                tender["Tender Document URL"],
-                tender["Corrigendum URL"],
-                tender["Scraped At"]
+                tender["Tender URL"],
+                tender["Corrigendum URL"]
             ])
 
-            existing.add(key)
+            existing.append(key)
 
             inserted += 1
 

@@ -3,6 +3,7 @@ from urllib.parse import urljoin
 from config import logger
 
 from bs4 import BeautifulSoup
+from utils.date_utils import normalize_tender_date
 
 
 def parse_noida_page(html, site):
@@ -87,19 +88,17 @@ def parse_noida_page(html, site):
 
                 "Tender Title": values.get("Tender Ttile", values.get("Tender Title", title)),
 
-                "Publishing Date": values.get("Publishing Date", ""),
+                "Publishing Date": normalize_tender_date(values.get("Publishing Date", "")),
 
-                "Closing Date": values.get("Closing Date", ""),
+                "Closing Date": normalize_tender_date(values.get("Closing Date", "")),
 
-                "Tender Document": tender_doc,
+                "Tender": tender_doc,
 
-                "Tender Document URL": tender_doc_url,
+                "Tender URL": tender_doc_url,
 
                 "Corrigendum": corr_text,
 
-                "Corrigendum URL": corr_url,
-
-                "Scraped At": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "Corrigendum URL": corr_url
             }
 
             if tender["Tender Number"]:

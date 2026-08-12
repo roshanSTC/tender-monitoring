@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 from config import logger
 
 from bs4 import BeautifulSoup
+from utils.date_utils import normalize_tender_date
 import requests
 
 
@@ -196,7 +197,7 @@ def parse_bnpm(site):
                 if links:
 
                     # First normal anchor is generally the
-                    # tender document and its text is the title.
+                    # Tender and its text is the title.
 
                     title = links[0].get_text(
                         " ",
@@ -313,17 +314,17 @@ def parse_bnpm(site):
 
                     "Tender Title": title,
 
-                    "Publishing Date": opening_date,
+                    "Publishing Date": normalize_tender_date(opening_date),
 
-                    "Closing Date": closing_date,
+                    "Closing Date": normalize_tender_date(closing_date),
 
-                    "Tender Document": (
+                    "Tender": (
                         "Download"
                         if tender_url
                         else ""
                     ),
 
-                    "Tender Document URL": tender_url,
+                    "Tender URL": tender_url,
 
                     "Corrigendum": (
                         "Corrigendum"
@@ -333,9 +334,7 @@ def parse_bnpm(site):
 
                     "Corrigendum URL": corrigendum_url,
 
-                    "Scraped At": datetime.now().strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
+                    
 
                 }
 

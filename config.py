@@ -119,6 +119,17 @@ KEYWORDS = [
     "Vinsak",
 ]
 
+
+# -------------------------
+# Frontend
+# -------------------------
+
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173"
+)
+
+
 # -------------------------
 # Email
 # -------------------------
@@ -129,6 +140,11 @@ EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
 
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT"))
+
+MAIL_FROM = os.getenv(
+    "MAIL_FROM",
+    EMAIL_SENDER
+)
 
 # -------------------------
 # Logging

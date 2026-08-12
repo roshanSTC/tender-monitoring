@@ -1,10 +1,50 @@
 
 
 from flask import Flask, jsonify
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from main import main
 from config import logger
+from database.connection import test_connection
+from routes.notifications import notifications_bp
+from routes.preferences import preferences_bp
+from auth.routes import auth_bp
+from routes.tenders import tenders_bp
+from routes.dashboard import dashboard_bp
+from routes.admin_users import admin_users_bp
+from routes.admin_dashboard import admin_dashboard_bp
+from routes.corrigendums import corrigendum_bp
 
 app = Flask(__name__)
+
+# CORS
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
+            ]
+        }
+    }
+)
+
+
+# JWT configuration
+app.config["JWT_SECRET_KEY"] = "change-this-to-a-long-random-secret"
+
+jwt = JWTManager(app)
+
+# Blueprint
+app.register_blueprint(auth_bp)
+app.register_blueprint(notifications_bp)
+app.register_blueprint(preferences_bp)
+app.register_blueprint(tenders_bp)
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(admin_users_bp)
+app.register_blueprint(admin_dashboard_bp)
+app.register_blueprint(corrigendum_bp)
 
 running = False
 
@@ -54,6 +94,24 @@ def run():
 
     finally:
         running = False
+        
+        
+@app.route("/api/health/db")
+def database_health():
+
+    connected = test_connection()
+
+    if connected:
+
+        return jsonify({
+            "status": "success",
+            "database": "connected"
+        })
+
+    return jsonify({
+        "status": "error",
+        "database": "disconnected"
+    }), 500
 
 
 if __name__ == "__main__":

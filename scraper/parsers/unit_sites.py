@@ -5,6 +5,7 @@ from config import logger
 from bs4 import BeautifulSoup
 
 from utils.status import get_status
+from utils.date_utils import normalize_tender_date
 
 
 def parse_unit_table(html, site):
@@ -29,7 +30,7 @@ def parse_unit_table(html, site):
                 continue
 
             # ---------------------------------
-            # Tender Document
+            # Tender
             # ---------------------------------
 
             tender_doc = ""
@@ -72,23 +73,21 @@ def parse_unit_table(html, site):
 
                 "Tender Title": cols[3].get_text(" ", strip=True),
 
-                "Publishing Date": cols[4].get_text(" ", strip=True),
+                "Publishing Date": normalize_tender_date(cols[4].get_text(" ", strip=True)),
 
-                "Closing Date": cols[5].get_text(" ", strip=True),
+                "Closing Date": normalize_tender_date(cols[5].get_text(" ", strip=True)),
                 
                 "Status": status,
 
                 "Days Left": days_left,
 
-                "Tender Document": tender_doc,
+                "Tender": tender_doc,
 
-                "Tender Document URL": tender_doc_url,
+                "Tender URL": tender_doc_url,
 
                 "Corrigendum": corr_text,
 
-                "Corrigendum URL": corr_url,
-
-                "Scraped At": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "Corrigendum URL": corr_url
 
             }
 

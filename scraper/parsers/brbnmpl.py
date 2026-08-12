@@ -2,6 +2,7 @@ from datetime import datetime
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
+from utils.date_utils import normalize_tender_date
 import requests
 
 
@@ -72,13 +73,12 @@ def parse_brbnmpl(site):
                     "Unit Name": "BRBNMPL",
                     "Tender Number": tender_no,
                     "Tender Title": title,
-                    "Publishing Date": open_date,
-                    "Closing Date": closing_date,
-                    "Tender Document": "Download" if tender_url else "",
-                    "Tender Document URL": tender_url,
+                    "Publishing Date": normalize_tender_date(open_date),
+                    "Closing Date": normalize_tender_date(closing_date),
+                    "Tender": "Download" if tender_url else "",
+                    "Tender URL": tender_url,
                     "Corrigendum": "",
-                    "Corrigendum URL": "",
-                    "Scraped At": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    "Corrigendum URL": ""
 
                 })
 

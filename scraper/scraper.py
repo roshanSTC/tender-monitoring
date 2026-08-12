@@ -70,31 +70,6 @@ class TenderScraper:
 
         return response.text
 
-# --------------------------------------------------------
-    
-    def get_existing_tenders(self):
-
-        wb = load_workbook(EXCEL_FILE)
-
-        ws = wb.active
-
-        existing = set()
-
-        for row in ws.iter_rows(min_row=2, values_only=True):
-
-            source = str(row[0]).strip() if row[0] else ""
-
-            tender_no = str(row[2]).strip() if row[2] else ""
-
-            if source and tender_no:
-
-                existing.add(f"{source}|{tender_no}")
-
-        wb.close()
-
-        return existing
-
-    # --------------------------------------------------------
     # --------------------------------------------------------
 
     def scrape(self, site):
@@ -120,6 +95,7 @@ class TenderScraper:
         for tender in tenders:
             tender["Source"] = site["name"]
             tender["Source URL"] = site["url"]
+            
 
         return tenders
 

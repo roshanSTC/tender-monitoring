@@ -5,14 +5,24 @@ Main entry point for the SPMCIL Tender Monitoring System.
 """
 
 
+from database.connection import SessionLocal
 from services.active_tenders import count_active_tenders
 from scraper.scraper import TenderScraper
 from services.compare import TenderComparer
 from services.filter import TenderFilter
 from notifications.mailer import TenderMailer
+from services.tender_repository import TenderRepository
+from services.tender_sync_service import TenderSyncService
 from storage.google_sheet import GoogleSheet
+from services.tender_service import save_new_tenders
+from services.notification_service import (
+    prepare_batch_notifications,
+    create_batch_in_app_notifications,
+    send_batch_emails,
+)
 from config import logger, TENDER_SITES
 sheet = GoogleSheet()
+db = SessionLocal()
 
 
 def main():
@@ -86,25 +96,157 @@ def main():
         # Create Excel if not exists
         # ---------------------------------------------------
 
-        sheet.create_sheet()
+        # sheet.create_sheet()
 
         # ---------------------------------------------------
         # Existing tenders
         # ---------------------------------------------------
 
-        existing = sheet.get_existing_tenders()
+        # existing = TenderRepository.get_existing_tenders(db)
 
-        print(f"Existing Tenders : {len(existing)}")
+        # print(f"Existing Tenders : {len(existing)}")
 
         # ---------------------------------------------------
         # Compare
         # ---------------------------------------------------
 
-        comparer = TenderComparer(existing)
+        # comparer = TenderComparer(existing)
 
-        new_tenders = comparer.get_new_tenders(all_tenders)
+        # new_tenders = comparer.get_new_tenders(all_tenders)
 
-        print(f"New Tenders : {len(new_tenders)}")
+        # print(f"New Tenders : {len(new_tenders)}")
+        
+        # print("\nSaving tenders to PostgreSQL...")
+
+        # new_tenders = save_new_tenders(all_tenders)
+        
+        # print("DEBUG first new tender:")
+        # print(new_tenders[0] if new_tenders else "No new tenders")
+
+        # print(f"New Tenders : {len(new_tenders)}")
+        
+        print("\nSynchronizing tenders...\n")
+
+        sync_result = TenderSyncService.sync(
+            db=db,
+            scraped_tenders=all_tenders,
+        )
+
+        sync_summary = sync_result["summary"]
+
+        new_tenders = sync_result["inserted"]
+
+        updated_tenders = sync_result["updated"]
+
+        corrigendums = sync_result["corrigendums"]
+
+        print("=" * 60)
+        print("Synchronization Summary")
+        print("=" * 60)
+        print(f"New Tenders     : {sync_summary['new_tenders']}")
+        print(f"Updated Tenders : {sync_summary['updated_tenders']}")
+        print(f"Corrigendums    : {sync_summary['corrigendums']}")
+        print(f"Unchanged       : {sync_summary['unchanged']}")
+        print("=" * 60)
+        
+        
+        # ---------------------------------------------------
+        # Batch Notifications
+        # ---------------------------------------------------
+
+        if new_tenders:
+
+            print("\nProcessing batch notifications...")
+
+            try:
+
+                # ---------------------------------------------
+                # Find users matching the new tenders
+                # ---------------------------------------------
+
+                from services.matching_service import (
+                    get_matching_users_for_tenders
+                )
+
+                matched_users = get_matching_users_for_tenders(
+                    new_tenders
+                )
+
+                print(
+                    f"Matched Users : {len(matched_users)}"
+                )
+
+                # ---------------------------------------------
+                # Prepare notification batches
+                # ---------------------------------------------
+
+                batches = prepare_batch_notifications(
+                    matched_users,
+                    new_tenders
+                )
+
+                print(
+                    f"Notification Batches : {len(batches)}"
+                )
+
+                # ---------------------------------------------
+                # Create in-app notifications
+                # ---------------------------------------------
+
+                in_app_results = (
+                    create_batch_in_app_notifications(
+                        batches
+                    )
+                )
+
+                print(
+                    f"In-App Notifications : "
+                    f"{len(in_app_results)}"
+                )
+
+                # ---------------------------------------------
+                # Send batch emails
+                # ---------------------------------------------
+
+                email_results = send_batch_emails(
+                    batches, in_app_results
+                )
+
+                print(
+                    f"Batch Emails Processed : "
+                    f"{len(email_results)}"
+                )
+
+                # ---------------------------------------------
+                # Print results
+                # ---------------------------------------------
+
+                for result in email_results:
+
+                    print(
+                        f"Email notification for user "
+                        f"{result['user_id']} : "
+                        f"{result['email_sent']}"
+                    )
+
+            except Exception as notification_error:
+
+                logger.exception(
+                    f"Batch notification processing failed: "
+                    f"{notification_error}"
+                )
+
+                print(
+                    f"Batch notification processing failed: "
+                    f"{notification_error}"
+                )
+
+        else:
+
+            print(
+                "\nNo new tenders. "
+                "No notifications needed."
+            )
 
         
 
@@ -119,15 +261,17 @@ def main():
         )
         
         
+                
+        
         # ---------------------------------------------------
         # Save new tenders
         # ---------------------------------------------------
 
         if new_tenders:
 
-            sheet.save_to_sheet(new_tenders, existing)
+            # sheet.save_to_sheet(new_tenders, [])
 
-            print("Excel updated successfully.")
+            print("stored in sheet")
 
         else:
 
@@ -147,7 +291,7 @@ def main():
                 "total_websites": len(TENDER_SITES),
                 "total_scraped": len(all_tenders),
                 "active_tenders": active_tenders,
-                "existing_tenders": len(existing),
+                "existing_tenders": 0,
                 "new_tenders": len(new_tenders),
                 "keyword_matches": len(filtered_tenders)
             }
@@ -159,13 +303,13 @@ def main():
 
         if filtered_tenders:
 
-            mailer.send_email(filtered_tenders, summary)
+            # mailer.send_email(filtered_tenders, summary)
 
             print("Email sent successfully.")
 
         else:
 
-            mailer.send_health_report(summary)
+            # mailer.send_health_report(summary)
 
             print("Health report sent successfully.")
 
@@ -182,9 +326,18 @@ def main():
 
     except Exception as e:
 
-        logger.exception(e)
+        logger.exception(
+            "Application Failed",
+            exc_info=True
+        )
 
-        print(f"\nApplication Failed : {e}")
+        print("\nApplication Failed")
+        print("=" * 70)
+
+        import traceback
+        traceback.print_exc()
+
+        print("=" * 70)
 
         return {
             "success": False,

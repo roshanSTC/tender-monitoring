@@ -28,7 +28,6 @@ class ExcelManager:
             "Tender Title",
             "Publishing Date",
             "Closing Date",
-            "Scraped At",
             "Clextral",
             "Schoen",
             "Schoen + Sandt",

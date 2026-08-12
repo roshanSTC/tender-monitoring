@@ -164,7 +164,7 @@ class TenderMailer:
                     </th>
 
                     <th>
-                        Tender Document
+                        Tender
                     </th>
 
                     <th>
@@ -302,21 +302,21 @@ class TenderMailer:
                     """
 
                 # --------------------------------------------------
-                # Tender Document
+                # Tender
                 # --------------------------------------------------
 
                 tender_doc = "-"
 
-                tender_document_url = tender.get(
-                    "Tender Document URL",
+                tender_Tender_url = tender.get(
+                    "Tender URL",
                     ""
                 )
 
-                if tender_document_url:
+                if tender_Tender_url:
 
                     tender_doc = f"""
                     <a
-                        href="{tender_document_url}"
+                        href="{tender_Tender_url}"
                         target="_blank"
                         style="
                             color:#1155CC;
@@ -761,3 +761,65 @@ class TenderMailer:
             print(
                 f"Tender alert email failed: {e}"
             )
+            
+    def send_user_email(
+        self,
+        recipient_email,
+        subject,
+        html_body,
+    ):
+
+        try:
+
+            message = MIMEMultipart("alternative")
+
+            message["Subject"] = subject
+            message["From"] = self.sender
+            message["To"] = recipient_email
+
+            message.attach(
+                MIMEText(
+                    html_body,
+                    "html"
+                )
+            )
+
+            server = smtplib.SMTP(
+                SMTP_SERVER,
+                SMTP_PORT
+            )
+
+            server.starttls()
+
+            server.login(
+                self.sender,
+                self.password
+            )
+
+            server.sendmail(
+                self.sender,
+                [recipient_email],
+                message.as_string()
+            )
+
+            server.quit()
+
+            logger.info(
+                f"User email sent successfully to {recipient_email}"
+            )
+
+            print(
+                f"User email sent successfully to {recipient_email}"
+            )
+
+            return True
+
+        except Exception as e:
+
+            logger.exception(e)
+
+            print(
+                f"User email failed for {recipient_email}: {e}"
+            )
+
+            return False
