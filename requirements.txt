@@ -17,3 +17,13 @@ openpyxl==3.1.5
 
 Flask==3.0.3
 gunicorn==23.0.0
+
+# Database
+SQLAlchemy==2.0.43
+psycopg2-binary==2.9.10
+
+# Frontend/API integration
+flask-cors==6.0.1
+
+Flask-JWT-Extended==4.7.1
+bcrypt==4.3.0
