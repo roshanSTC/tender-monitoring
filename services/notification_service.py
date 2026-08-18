@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 
 from database.connection import SessionLocal
@@ -11,6 +12,7 @@ from models import (
 from services.matching_service import get_matching_users
 
 from notifications.mailer import TenderMailer
+from services.template_service import TemplateService
 
 
 def create_tender_notifications(tender):
@@ -197,7 +199,7 @@ def create_tender_notifications(tender):
                         
                         # ONLY after successful send
                         mark_email_sent(
-                            user_id=notification.id,
+                            notification.id,
                         )
 
 
@@ -542,8 +544,19 @@ def send_batch_emails(batches, in_app_results):
                 email_lines.append("")
                 email_lines.append("----------------------")
                 email_lines.append("")
+                
+            grouped_tenders = defaultdict(list)
 
-            email_body = "\n".join(email_lines)
+            for tender in tenders:
+                source = tender.get("Source", "Other")
+                grouped_tenders[source].append(tender)
+
+            email_body = TemplateService.render(
+                        "emails/tender_match.html",
+                        grouped_tenders=dict(grouped_tenders),
+                        tender_count=len(tenders),
+                        user_email=user_email,
+                    )
 
             try:
 

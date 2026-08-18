@@ -105,6 +105,8 @@ class CorrigendumService:
         )
 
         db.add(corrigendum)
+        print(corrigendum.id)
+        db.flush() 
 
         # NO db.commit()
         # NO db.refresh()

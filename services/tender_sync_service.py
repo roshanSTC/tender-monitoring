@@ -15,6 +15,8 @@ Responsibilities
 8. Commit everything as a single transaction
 """
 
+from datetime import datetime
+
 from config import logger
 
 from services.compare import TenderComparer
@@ -22,9 +24,11 @@ from services.compare import TenderComparer
 from services.corrigendum_service import (
     CorrigendumService,
 )
+
 from services.corrigendum_notification_service import (
     CorrigendumNotificationService,
 )
+
 from services.tender_service import (
     get_existing_tenders,
     save_new_tenders,
@@ -34,6 +38,9 @@ from services.tender_service import (
 from services.corrigendum_intelligence import (
     CorrigendumIntelligence,
 )
+
+from utils.json_utils import make_json_serializable
+from utils.normalizer import TenderNormalizer
 
 
 class TenderSyncService:
@@ -124,26 +131,46 @@ class TenderSyncService:
                     "changes"
                 ]
 
-                # ----------------------------------------------
-                # Update tender
-                # ----------------------------------------------
+                # --------------------------------------------------
+                # IMPORTANT
+                #
+                # The OLD closing date always comes from
+                # the existing tender record in the database.
+                #
+                # We capture it BEFORE update_tender().
+                # --------------------------------------------------
 
-                update_tender(
-                    db,
-                    existing,
-                    scraped,
+                old_closing_date = (
+                    TenderNormalizer.date(
+                        existing.closing_date
+                    )
                 )
 
-                updated_count += 1
+                logger.info(
+                    "Captured OLD closing date from tender table: "
+                    f"{existing.source}|"
+                    f"{existing.tender_number}|"
+                    f"{old_closing_date}"
+                )
 
-                # ----------------------------------------------
+                # --------------------------------------------------
                 # Corrigendum detection
-                # ----------------------------------------------
+                # --------------------------------------------------
 
                 if TenderSyncService.has_corrigendum(
                     scraped,
                     changes,
                 ):
+
+                    logger.info(
+                        "Corrigendum detected for "
+                        f"{existing.source}|"
+                        f"{existing.tender_number}|"
+                        f"old_closing_date="
+                        f"{old_closing_date}|"
+                        f"scraped_closing_date="
+                        f"{scraped.get('Closing Date')}"
+                    )
 
                     corrigendum = (
                         TenderSyncService.process_corrigendum(
@@ -151,6 +178,7 @@ class TenderSyncService:
                             tender=existing,
                             scraped=scraped,
                             changes=changes,
+                            old_closing_date=old_closing_date,
                         )
                     )
 
@@ -159,7 +187,9 @@ class TenderSyncService:
                         logger.info(
                             "Corrigendum created for "
                             f"{existing.source}|"
-                            f"{existing.tender_number}"
+                            f"{existing.tender_number}|"
+                            f"old_closing_date="
+                            f"{old_closing_date}"
                         )
 
                         notification_results = (
@@ -175,9 +205,21 @@ class TenderSyncService:
                             f"{len(notification_results)}"
                         )
 
-                # ----------------------------------------------
+                # --------------------------------------------------
+                # Update tender AFTER corrigendum processing
+                # --------------------------------------------------
+
+                update_tender(
+                    db,
+                    existing,
+                    scraped,
+                )
+
+                updated_count += 1
+
+                # --------------------------------------------------
                 # Store update result
-                # ----------------------------------------------
+                # --------------------------------------------------
 
                 updated_results.append({
                     "existing": existing,
@@ -214,37 +256,26 @@ class TenderSyncService:
                     f"{source}|{tender_number}"
                 )
 
-                existing = existing_tenders.get(
-                    key
-                )
+                existing = existing_tenders.get(key)
 
-                # New tenders were already inserted above.
-                # Their corrigendum will be checked separately
-                # below if necessary.
                 if existing is None:
                     continue
 
+                # --------------------------------------------------
+                # Corrigendum information
+                # --------------------------------------------------
+
                 corrigendum_url = (
-                    scraped.get(
-                        "Corrigendum URL"
-                    )
+                    scraped.get("Corrigendum URL")
                     or ""
                 ).strip()
 
-                corrigendum_text = (
-                    scraped.get(
-                        "Corrigendum"
-                    )
-                    or ""
-                ).strip()
-
-                # No corrigendum
                 if not corrigendum_url:
                     continue
 
-                # ----------------------------------------------
+                # --------------------------------------------------
                 # Check if history already exists
-                # ----------------------------------------------
+                # --------------------------------------------------
 
                 existing_corrigendum = (
                     CorrigendumService.get_by_document_url(
@@ -256,35 +287,230 @@ class TenderSyncService:
 
                 if existing_corrigendum:
 
+                    # --------------------------------------------------
+                    # Repair missing old/new dates if necessary.
+                    #
+                    # OLD date comes from tender table.
+                    # --------------------------------------------------
+
+                    repaired = False
+
+                    if (
+                        existing_corrigendum.old_closing_date
+                        is None
+                    ):
+
+                        tender_old_date = (
+                            TenderNormalizer.date(
+                                existing.closing_date
+                            )
+                        )
+
+                        if tender_old_date:
+
+                            existing_corrigendum.old_closing_date = (
+                                tender_old_date
+                            )
+
+                            repaired = True
+
+                            logger.info(
+                                "Repaired corrigendum OLD closing date "
+                                "from tender table: "
+                                f"{source}|"
+                                f"{tender_number}|"
+                                f"{tender_old_date}"
+                            )
+
+                    # --------------------------------------------------
+                    # Repair NEW closing date from scraped tender
+                    # --------------------------------------------------
+
+                    if (
+                        existing_corrigendum.new_closing_date
+                        is None
+                    ):
+
+                        scraped_new_date = (
+                            TenderNormalizer.date(
+                                scraped.get(
+                                    "Closing Date"
+                                )
+                            )
+                        )
+
+                        if scraped_new_date:
+
+                            existing_corrigendum.new_closing_date = (
+                                scraped_new_date
+                            )
+
+                            repaired = True
+
+                            logger.info(
+                                "Repaired corrigendum NEW closing date "
+                                f"from scraped data: "
+                                f"{source}|"
+                                f"{tender_number}|"
+                                f"{scraped_new_date}"
+                            )
+
+                    if repaired:
+
+                        logger.info(
+                            "Existing corrigendum repaired: "
+                            f"{source}|"
+                            f"{tender_number}|"
+                            f"{corrigendum_url}"
+                        )
+
                     continue
 
-                # ----------------------------------------------
-                # Existing tender has corrigendum but history
-                # does not contain it.
-                #
-                # This is the historical backfill case.
-                # ----------------------------------------------
+                # --------------------------------------------------
+                # Historical corrigendum found
+                # --------------------------------------------------
 
                 logger.info(
                     "Backfilling historical corrigendum: "
                     f"{source}|{tender_number}"
                 )
 
-                corrigendum = (
-                    TenderSyncService.process_corrigendum(
-                        db=db,
-                        tender=existing,
-                        scraped=scraped,
-                        changes={},
+                # ==================================================
+                # IMPORTANT
+                #
+                # OLD closing date MUST come from the tender table.
+                #
+                # This is captured BEFORE modifying the tender.
+                # ==================================================
+
+                old_closing_date = (
+                    TenderNormalizer.date(
+                        existing.closing_date
                     )
                 )
+
+                # --------------------------------------------------
+                # NEW closing date comes from scraped data
+                # --------------------------------------------------
+
+                new_closing_date = (
+                    TenderNormalizer.date(
+                        scraped.get("Closing Date")
+                    )
+                )
+
+                logger.info(
+                    "Historical corrigendum dates: "
+                    f"{source}|"
+                    f"{tender_number}|"
+                    f"old={old_closing_date}|"
+                    f"new={new_closing_date}"
+                )
+
+                # --------------------------------------------------
+                # Build historical changes
+                # --------------------------------------------------
+
+                historical_changes = {}
+
+                # Only create a closing-date change when
+                # scraped data actually contains a new date.
+
+                if new_closing_date:
+
+                    historical_changes[
+                        "closing_date"
+                    ] = {
+
+                        "old": old_closing_date,
+
+                        "new": new_closing_date,
+
+                    }
+
+                # ==================================================
+                # Create corrigendum FIRST
+                # ==================================================
+
+                logger.info(
+                    "Creating historical corrigendum with "
+                    f"old_closing_date={old_closing_date}|"
+                    f"new_closing_date={new_closing_date}"
+                )
+
+                corrigendum = (
+                    TenderSyncService.process_corrigendum(
+
+                        db=db,
+
+                        tender=existing,
+
+                        scraped=scraped,
+
+                        changes=historical_changes,
+
+                        old_closing_date=old_closing_date,
+
+                    )
+                )
+
+                # ==================================================
+                # Update parent tender AFTER corrigendum history
+                # ==================================================
+
+                if new_closing_date:
+
+                    normalized_existing_date = (
+                        TenderNormalizer.date(
+                            existing.closing_date
+                        )
+                    )
+
+                    if (
+                        normalized_existing_date
+                        != new_closing_date
+                    ):
+
+                        existing.closing_date = (
+                            new_closing_date
+                        )
+
+                        existing.updated_at = (
+                            datetime.utcnow()
+                        )
+
+                        logger.info(
+                            "Updated tender closing date from "
+                            "historical corrigendum: "
+                            f"{source}|"
+                            f"{tender_number}|"
+                            f"{new_closing_date}"
+                        )
+
+                # --------------------------------------------------
+                # Count
+                # --------------------------------------------------
 
                 if corrigendum:
 
                     backfilled_count += 1
 
+                    notification_results = (
+                        CorrigendumNotificationService.notify(
+                            db=db,
+                            tender=existing,
+                            corrigendum=corrigendum,
+                        )
+                    )
+
+                    logger.info(
+                        "Historical corrigendum "
+                        "notifications processed: "
+                        f"{len(notification_results)}"
+                    )
+
             logger.info(
-                f"Historical Corrigendums Backfilled : "
+                "Historical Corrigendums Backfilled : "
                 f"{backfilled_count}"
             )
 
@@ -303,7 +529,11 @@ class TenderSyncService:
             # ==================================================
 
             corrigendum_count = (
-                len(comparison["corrigendums"])
+                len(
+                    comparison[
+                        "corrigendums"
+                    ]
+                )
                 + backfilled_count
             )
 
@@ -428,28 +658,35 @@ class TenderSyncService:
         tender,
         scraped,
         changes,
+        old_closing_date=None,
     ):
         """
-        Creates a corrigendum history record.
+        Creates or repairs a corrigendum history record.
 
-        Intelligence is calculated before storing
-        the corrigendum.
+        IMPORTANT DATE RULE:
+
+        OLD closing date:
+            Always comes from the existing tender table
+            before the tender is updated.
+
+        NEW closing date:
+            Comes from the scraped tender data.
+
+        The explicit old_closing_date argument is retained
+        so the caller can pass the database value captured
+        before any update.
 
         No commit happens here.
         The parent sync transaction controls commit.
         """
 
         corrigendum_url = (
-            scraped.get(
-                "Corrigendum URL"
-            )
+            scraped.get("Corrigendum URL")
             or ""
         ).strip()
 
         corrigendum_text = (
-            scraped.get(
-                "Corrigendum"
-            )
+            scraped.get("Corrigendum")
             or ""
         ).strip()
 
@@ -458,8 +695,37 @@ class TenderSyncService:
         # ------------------------------------------------------
 
         if not corrigendum_url:
-
             return None
+
+        # ------------------------------------------------------
+        # IMPORTANT
+        #
+        # If caller did not explicitly provide old date,
+        # get it directly from the tender table.
+        # ------------------------------------------------------
+
+        if old_closing_date is None:
+
+            old_closing_date = (
+                TenderNormalizer.date(
+                    tender.closing_date
+                )
+            )
+
+        else:
+
+            old_closing_date = (
+                TenderNormalizer.date(
+                    old_closing_date
+                )
+            )
+
+        logger.info(
+            "Corrigendum OLD closing date from tender table: "
+            f"{tender.source}|"
+            f"{tender.tender_number}|"
+            f"{old_closing_date}"
+        )
 
         # ------------------------------------------------------
         # Prevent duplicates
@@ -475,51 +741,107 @@ class TenderSyncService:
 
         if existing_corrigendum:
 
-            logger.info(
-                "Corrigendum already exists: "
-                f"{tender.source}|"
-                f"{tender.tender_number}|"
-                f"{corrigendum_url}"
-            )
+            repaired = False
 
-            return None
+            # --------------------------------------------------
+            # Repair missing OLD closing date
+            # --------------------------------------------------
+
+            if (
+                existing_corrigendum.old_closing_date is None
+                and old_closing_date is not None
+            ):
+
+                existing_corrigendum.old_closing_date = (
+                    old_closing_date
+                )
+
+                repaired = True
+
+                logger.info(
+                    "Repaired missing old closing date "
+                    "from tender table: "
+                    f"{tender.source}|"
+                    f"{tender.tender_number}|"
+                    f"{old_closing_date}"
+                )
+
+            # --------------------------------------------------
+            # Repair missing NEW closing date
+            # --------------------------------------------------
+
+            if (
+                existing_corrigendum.new_closing_date is None
+            ):
+
+                scraped_new_date = (
+                    TenderNormalizer.date(
+                        scraped.get(
+                            "Closing Date"
+                        )
+                    )
+                )
+
+                if scraped_new_date:
+
+                    existing_corrigendum.new_closing_date = (
+                        scraped_new_date
+                    )
+
+                    repaired = True
+
+                    logger.info(
+                        "Repaired missing new closing date "
+                        "from scraped data: "
+                        f"{tender.source}|"
+                        f"{tender.tender_number}|"
+                        f"{scraped_new_date}"
+                    )
+
+            if repaired:
+
+                logger.info(
+                    "Existing corrigendum repaired: "
+                    f"{tender.source}|"
+                    f"{tender.tender_number}|"
+                    f"{corrigendum_url}"
+                )
+
+            return existing_corrigendum
 
         # ------------------------------------------------------
         # Intelligence
         # ------------------------------------------------------
 
-        intelligence = (
+        intelligence = make_json_serializable(
             CorrigendumIntelligence.analyze(
                 changes
             )
         )
 
         # ------------------------------------------------------
-        # Closing dates
+        # Closing date change
         # ------------------------------------------------------
 
-        old_closing_date = (
-            changes
-            .get(
+        closing_change = (
+            changes.get(
                 "closing_date",
                 {}
             )
-            .get("old")
         )
 
         new_closing_date = (
-            changes
-            .get(
-                "closing_date",
-                {}
-            )
-            .get("new")
+            closing_change.get("new")
         )
 
-        # Historical backfill case:
+        # ------------------------------------------------------
+        # IMPORTANT
         #
-        # There may be no closing-date change in `changes`,
-        # so use the tender's current closing date.
+        # Never use changes["old"] as the primary source
+        # for the old date.
+        #
+        # The tender table is the source of truth.
+        # ------------------------------------------------------
 
         if new_closing_date is None:
 
@@ -528,6 +850,50 @@ class TenderSyncService:
                     "Closing Date"
                 )
             )
+
+        new_closing_date = (
+            TenderNormalizer.date(
+                new_closing_date
+            )
+        )
+
+        # ------------------------------------------------------
+        # Debug logging
+        # ------------------------------------------------------
+
+        logger.info(
+            "========== PROCESS CORRIGENDUM =========="
+        )
+
+        logger.info(
+            "Tender: "
+            f"{tender.source}|"
+            f"{tender.tender_number}"
+        )
+
+        logger.info(
+            "Tender DB closing date: "
+            f"{tender.closing_date}"
+        )
+
+        logger.info(
+            "OLD closing date: "
+            f"{old_closing_date}"
+        )
+
+        logger.info(
+            "NEW closing date: "
+            f"{new_closing_date}"
+        )
+
+        logger.info(
+            "Corrigendum URL: "
+            f"{corrigendum_url}"
+        )
+
+        logger.info(
+            "=========================================="
+        )
 
         # ------------------------------------------------------
         # Corrigendum number
@@ -543,7 +909,7 @@ class TenderSyncService:
         )
 
         # ------------------------------------------------------
-        # Create
+        # Create corrigendum history
         # ------------------------------------------------------
 
         corrigendum = (
@@ -570,9 +936,17 @@ class TenderSyncService:
                     )
                 ),
 
+                # ----------------------------------------------
+                # OLD = tender table
+                # ----------------------------------------------
+
                 old_closing_date=(
                     old_closing_date
                 ),
+
+                # ----------------------------------------------
+                # NEW = scraped data
+                # ----------------------------------------------
 
                 new_closing_date=(
                     new_closing_date
@@ -607,7 +981,6 @@ class TenderSyncService:
                         "details"
                     ]
                 ),
-
             )
         )
 
@@ -619,7 +992,11 @@ class TenderSyncService:
             "Corrigendum processed: "
             f"{tender.source}|"
             f"{tender.tender_number}|"
-            f"{corrigendum_no}"
+            f"{corrigendum_no}|"
+            f"old_closing_date="
+            f"{old_closing_date}|"
+            f"new_closing_date="
+            f"{new_closing_date}"
         )
 
         return corrigendum

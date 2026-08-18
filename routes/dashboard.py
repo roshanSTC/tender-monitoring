@@ -192,8 +192,8 @@ def get_dashboard():
             count = (
                 db.query(func.count(Tender.id))
                 .filter(
-                    Tender.created_at >= activity_date,
-                    Tender.created_at < next_date
+                    Tender.publishing_date >= activity_date,
+                    Tender.publishing_date < next_date
                 )
                 .scalar()
                 or 0

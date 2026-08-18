@@ -311,7 +311,7 @@ def main():
 
             # mailer.send_health_report(summary)
 
-            print("Health report sent successfully.")
+            print("Health report not sent.")
 
         logger.info("Application Finished Successfully")
 

@@ -4,6 +4,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import config
+from services.template_service import TemplateService
 
 
 class EmailService:
@@ -69,58 +70,34 @@ class EmailService:
             f"/set-password?token={token}"
         )
 
-        html = f"""
-        <html>
-        <body style="font-family:Arial,sans-serif">
-
-            <h2>Hello {name},</h2>
-
-            <p>
-                You have been invited to
-                <strong>Tender Monitoring System</strong>.
-            </p>
-            
-
-            <p>
-                {token}
-            </p>
-            <p>
-                Click the button below to set your password.
-            </p>
-
-            <p>
-                <a
-                    href="{invitation_link}"
-                    style="
-                        background:#2563eb;
-                        color:white;
-                        padding:12px 20px;
-                        text-decoration:none;
-                        border-radius:6px;
-                    "
-                >
-                    Set Password
-                </a>
-            </p>
-
-            <p>
-                This invitation will expire in
-                <strong>48 hours</strong>.
-            </p>
-
-            <hr>
-
-            <small>
-                If you didn't expect this email,
-                you can safely ignore it.
-            </small>
-
-        </body>
-        </html>
-        """
+        html = TemplateService.render(
+            "emails/invitation.html",
+            name=name,
+            token=token,
+            invitation_link=invitation_link,
+        )
 
         return EmailService.send_email(
             email,
             "Invitation to Tender Monitoring System",
+            html,
+        )
+        
+    @staticmethod
+    def send_corrigendum_email(
+        email: str,
+        template_data: dict,
+    ):
+
+        from services.template_service import TemplateService
+
+        html = TemplateService.render(
+            "emails/corrigendum.html",
+            **template_data
+        )
+
+        return EmailService.send_email(
+            email,
+            "Corrigendum Alert",
             html,
         )

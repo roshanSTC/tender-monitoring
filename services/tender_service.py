@@ -196,15 +196,15 @@ def update_tender(
     something changed.
     """
 
-    tender.title = TenderNormalizer.date((
+    tender.title = (
         scraped.get("Tender Title")
         or tender.title
-    ))
+    )
 
-    tender.unit_name = TenderNormalizer.date((
+    tender.unit_name = (
         scraped.get("Unit Name")
         or tender.unit_name
-    ))
+    )
 
     tender.publishing_date = TenderNormalizer.date((
         scraped.get("Publishing Date")
@@ -216,25 +216,25 @@ def update_tender(
         or tender.closing_date
     ))
 
-    tender.tender = TenderNormalizer.date((
+    tender.tender = (
         scraped.get("Tender")
         or tender.tender
-    ))
+    )
 
-    tender.tender_url = TenderNormalizer.date((
+    tender.tender_url = (
         scraped.get("Tender URL")
         or tender.tender_url
-    ))
+    )
 
-    tender.corrigendum = TenderNormalizer.date((
+    tender.corrigendum = (
         scraped.get("Corrigendum")
         or tender.corrigendum
-    ))
+    )
 
-    tender.corrigendum_url = TenderNormalizer.date((
+    tender.corrigendum_url = (
         scraped.get("Corrigendum URL")
         or tender.corrigendum_url
-    ))
+    )
 
     tender.updated_at = datetime.utcnow()
 

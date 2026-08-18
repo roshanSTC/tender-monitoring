@@ -1,9 +1,14 @@
 from datetime import datetime
+import config
 
 from models.notification import Notification
 from models.notification_tender import NotificationTender
 from models.user import User
 from models.user_preference import UserPreference
+from models.user_tender_preference import UserTenderPreference
+from config import logger
+from services.email_service import EmailService
+from services.template_service import TemplateService
 
 
 class CorrigendumNotificationService:
@@ -37,6 +42,22 @@ class CorrigendumNotificationService:
             )
         )
 
+        if not users:
+
+            logger.info(
+                f"No historical recipients found for "
+                f"{tender.tender_number}. "
+                f"Trying keyword preferences."
+            )
+
+            users = (
+                CorrigendumNotificationService
+                .get_users_matching_preferences(
+                    db=db,
+                    tender=tender,
+                )
+            )
+
         print(
             f"Corrigendum notification recipients: "
             f"{len(users)}"
@@ -45,6 +66,11 @@ class CorrigendumNotificationService:
         results = []
 
         for user in users:
+            
+            logger.info(
+                f"Recipient -> "
+                f"{user.id} | {user.email}"
+            )
 
             result = (
                 CorrigendumNotificationService
@@ -290,36 +316,72 @@ class CorrigendumNotificationService:
 
         if email_enabled and user.email:
 
-            email_sent = (
-                CorrigendumNotificationService.send_email(
-                    user=user,
-                    tender=tender,
-                    corrigendum=corrigendum,
+            try:
+
+                html_body = TemplateService.render(
+                    "emails/corrigendum.html",
+
+                    user_name=user.name or user.email,
+
+                    tender_number=tender.tender_number,
+
+                    tender_title=tender.title,
+
+                    source=tender.source,
+
+                    corrigendum_no=corrigendum.corrigendum_no,
+
+                    published_date=corrigendum.published_date,
+
+                    old_closing_date=corrigendum.old_closing_date,
+
+                    new_closing_date=corrigendum.new_closing_date,
+
+                    change_summary=corrigendum.change_summary,
+
+                    corrigendum_url=corrigendum.document_url,
                 )
-            )
-
-            if email_sent:
-
-                # If an in-app notification exists,
-                # update its email status.
-                if notification:
-
-                    notification.email_sent = True
-
-                    notification.email_sent_at = (
-                        datetime.utcnow()
-                    )
 
                 print(
-                    f"Corrigendum email sent "
-                    f"to {user.email}"
+                    f"Sending corrigendum email to {user.email}"
                 )
 
-            else:
+                email_sent = EmailService.send_email(
+                    to_email=user.email,
+                    subject=(
+                        f"Corrigendum Update - "
+                        f"{tender.tender_number}"
+                    ),
+                    html=html_body,
+                )
+
+                if email_sent:
+
+                    if notification:
+
+                        notification.email_sent = True
+
+                        notification.email_sent_at = (
+                            datetime.utcnow()
+                        )
+
+                    print(
+                        f"Corrigendum email sent "
+                        f"to {user.email}"
+                    )
+
+                else:
+
+                    print(
+                        f"Corrigendum email failed "
+                        f"for {user.email}"
+                    )
+
+            except Exception as e:
 
                 print(
                     f"Corrigendum email failed "
-                    f"for {user.email}"
+                    f"for {user.email}: {e}"
                 )
 
         elif not email_enabled:
@@ -377,6 +439,15 @@ class CorrigendumNotificationService:
         subject = (
             f"Corrigendum Update - "
             f"{tender.tender_number}"
+        )
+        
+        tender_url = (
+            f"{config.FRONTEND_URL}"
+            f"/tenders/{tender.id}"
+        )
+
+        corrigendum_url = (
+            corrigendum.document_url
         )
 
         email_body = f"""
@@ -455,24 +526,43 @@ class CorrigendumNotificationService:
             </p>
             """
 
-        if corrigendum.document_url:
+        email_body += f"""
+        <p>
+
+            <a
+                href="{tender_url}"
+                style="
+                    background:#16a34a;
+                    color:white;
+                    padding:10px 16px;
+                    text-decoration:none;
+                    border-radius:5px;
+                    margin-right:10px;
+                "
+            >
+                View Tender
+            </a>
+
+        """
+
+        if corrigendum_url:
 
             email_body += f"""
-            <p>
-                <a
-                    href="{corrigendum.document_url}"
-                    style="
-                        background:#2563eb;
-                        color:white;
-                        padding:10px 16px;
-                        text-decoration:none;
-                        border-radius:5px;
-                    "
-                >
-                    View Corrigendum
-                </a>
-            </p>
+            <a
+                href="{corrigendum_url}"
+                style="
+                    background:#2563eb;
+                    color:white;
+                    padding:10px 16px;
+                    text-decoration:none;
+                    border-radius:5px;
+                "
+            >
+                View Corrigendum
+            </a>
             """
+
+        email_body += "</p>"
 
         email_body += """
             <hr>
@@ -498,6 +588,8 @@ class CorrigendumNotificationService:
                 subject=subject,
                 html_body=email_body,
             )
+            
+            print("MAIL RESULT:", result)
 
             return bool(result)
 
@@ -509,3 +601,61 @@ class CorrigendumNotificationService:
             )
 
             return False
+        
+        
+    @staticmethod
+    def get_users_matching_preferences(
+        db,
+        tender,
+    ):
+        """
+        Find users whose active keyword
+        preferences match the tender title.
+        """
+
+        title = (
+            tender.title or ""
+        ).lower()
+
+        matched_user_ids = set()
+
+        preferences = (
+            db.query(UserTenderPreference)
+            .filter(
+                UserTenderPreference.preference_type == "keyword",
+                UserTenderPreference.is_active == True,
+            )
+            .all()
+        )
+
+        for pref in preferences:
+
+            keyword = (
+                pref.preference_value or ""
+            ).strip().lower()
+
+            if not keyword:
+                continue
+
+            if keyword in title:
+
+                matched_user_ids.add(
+                    pref.user_id
+                )
+
+                logger.info(
+                    f"Keyword matched: "
+                    f"{keyword} -> "
+                    f"{tender.tender_number}"
+                )
+
+        if not matched_user_ids:
+            return []
+
+        return (
+            db.query(User)
+            .filter(
+                User.id.in_(matched_user_ids)
+            )
+            .all()
+        )
