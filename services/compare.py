@@ -262,6 +262,7 @@ class TenderComparer:
                 "new": scraped.get("Corrigendum URL"),
 
             }
+        return changes
 
     # ----------------------------------------------------------
 

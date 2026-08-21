@@ -744,7 +744,7 @@ class TenderSyncService:
             repaired = False
 
             # --------------------------------------------------
-            # Repair missing OLD closing date
+            # OLD closing date
             # --------------------------------------------------
 
             if (
@@ -759,42 +759,73 @@ class TenderSyncService:
                 repaired = True
 
                 logger.info(
-                    "Repaired missing old closing date "
-                    "from tender table: "
+                    "Repaired missing OLD closing date: "
                     f"{tender.source}|"
                     f"{tender.tender_number}|"
                     f"{old_closing_date}"
                 )
 
             # --------------------------------------------------
-            # Repair missing NEW closing date
+            # NEW closing date
             # --------------------------------------------------
 
+            scraped_new_date = (
+                TenderNormalizer.date(
+                    scraped.get("Closing Date")
+                )
+            )
+
             if (
-                existing_corrigendum.new_closing_date is None
+                scraped_new_date is not None
+                and
+                existing_corrigendum.new_closing_date
+                != scraped_new_date
             ):
 
-                scraped_new_date = (
+                logger.info(
+                    "Updating corrigendum NEW closing date: "
+                    f"{tender.source}|"
+                    f"{tender.tender_number}|"
+                    f"old_history="
+                    f"{existing_corrigendum.new_closing_date}|"
+                    f"new_scraped="
+                    f"{scraped_new_date}"
+                )
+
+                existing_corrigendum.new_closing_date = (
+                    scraped_new_date
+                )
+
+                repaired = True
+
+            # --------------------------------------------------
+            # Update parent tender closing date as well
+            # --------------------------------------------------
+
+            if scraped_new_date is not None:
+
+                current_tender_date = (
                     TenderNormalizer.date(
-                        scraped.get(
-                            "Closing Date"
-                        )
+                        tender.closing_date
                     )
                 )
 
-                if scraped_new_date:
+                if current_tender_date != scraped_new_date:
 
-                    existing_corrigendum.new_closing_date = (
+                    tender.closing_date = (
                         scraped_new_date
                     )
+
+                    tender.updated_at = datetime.utcnow()
 
                     repaired = True
 
                     logger.info(
-                        "Repaired missing new closing date "
-                        "from scraped data: "
+                        "Updated tender closing date: "
                         f"{tender.source}|"
                         f"{tender.tender_number}|"
+                        f"{current_tender_date}"
+                        f" -> "
                         f"{scraped_new_date}"
                     )
 
