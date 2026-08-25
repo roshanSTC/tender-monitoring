@@ -2,58 +2,75 @@
 compare.py
 
 Compares scraped tenders with database tenders.
+
+Responsibilities:
+1. Detect new tenders
+2. Detect changed tenders
+3. Detect possible corrigendum-related changes
+
+IMPORTANT:
+This class only DETECTS changes.
+
+It does NOT decide whether a corrigendum history record
+is actually new.
+
+The final duplicate check is performed against the
+TenderCorrigendum table inside TenderSyncService.
 """
 
 from config import logger
 from utils.normalizer import TenderNormalizer
 
+
 class TenderComparer:
 
     def __init__(self, existing_tenders):
-
         self.existing_tenders = existing_tenders
 
-    # ----------------------------------------------------------
+    # ==========================================================
+    # MAIN COMPARISON
+    # ==========================================================
 
     def get_changes(self, scraped_tenders):
 
         new_tenders = []
-
         updated_tenders = []
-
         corrigendums = []
-
         unchanged = []
 
         for scraped in scraped_tenders:
 
             source = (
-                scraped.get("Source", "")
-                or ""
+                scraped.get("Source") or ""
             ).strip()
 
             tender_no = (
-                scraped.get("Tender Number", "")
-                or ""
+                scraped.get("Tender Number") or ""
             ).strip()
 
-            if not tender_no:
+            # --------------------------------------------------
+            # Invalid tender
+            # --------------------------------------------------
+
+            if not source or not tender_no:
 
                 logger.warning(
-                    "Tender Number missing."
+                    "Source or Tender Number missing."
                 )
 
                 continue
 
-            unique_key = f"{source}|{tender_no}"
+            unique_key = (
+                f"{source}|{tender_no}"
+            )
 
             existing = self.existing_tenders.get(
                 unique_key
             )
 
-            # ==============================================
+            # ==================================================
             # NEW TENDER
-            # ==============================================
+            # ==================================================
 
             if existing is None:
 
@@ -63,18 +80,18 @@ class TenderComparer:
 
                 continue
 
-            # ==============================================
-            # COMPARE
-            # ==============================================
+            # ==================================================
+            # COMPARE EXISTING TENDER
+            # ==================================================
 
             changes = self.compare_fields(
                 existing,
                 scraped,
             )
 
-            # ==============================================
+            # ==================================================
             # NO CHANGE
-            # ==============================================
+            # ==================================================
 
             if not changes:
 
@@ -84,11 +101,11 @@ class TenderComparer:
 
                 continue
 
-            # ==============================================
+            # ==================================================
             # UPDATED TENDER
-            # ==============================================
+            # ==================================================
 
-            updated_tenders.append({
+            update_data = {
 
                 "existing": existing,
 
@@ -96,11 +113,21 @@ class TenderComparer:
 
                 "changes": changes,
 
-            })
+            }
 
-            # ==============================================
-            # CORRIGENDUM
-            # ==============================================
+            updated_tenders.append(
+                update_data
+            )
+
+            # ==================================================
+            # POSSIBLE CORRIGENDUM
+            # ==================================================
+            #
+            # This is only a candidate.
+            #
+            # TenderSyncService performs the actual database
+            # duplicate check before creating history/notification.
+            # ==================================================
 
             if self.detect_corrigendum(
                 existing,
@@ -108,15 +135,13 @@ class TenderComparer:
                 changes,
             ):
 
-                corrigendums.append({
+                corrigendums.append(
+                    update_data
+                )
 
-                    "existing": existing,
-
-                    "scraped": scraped,
-
-                    "changes": changes,
-
-                })
+        # ======================================================
+        # LOGGING
+        # ======================================================
 
         logger.info(
             f"New Tenders : {len(new_tenders)}"
@@ -127,7 +152,8 @@ class TenderComparer:
         )
 
         logger.info(
-            f"Corrigendums : {len(corrigendums)}"
+            f"Corrigendum Candidates : "
+            f"{len(corrigendums)}"
         )
 
         logger.info(
@@ -145,8 +171,10 @@ class TenderComparer:
             "unchanged": unchanged,
 
         }
-    
-    # ----------------------------------------------------------
+
+    # ==========================================================
+    # COMPARE FIELDS
+    # ==========================================================
 
     def compare_fields(
         self,
@@ -156,11 +184,13 @@ class TenderComparer:
 
         changes = {}
 
-        # ------------------------------------
-        # Title
-        # ------------------------------------
+        # ======================================================
+        # TITLE
+        # ======================================================
 
-        db_title = TenderNormalizer.text(existing.title)
+        db_title = TenderNormalizer.text(
+            existing.title
+        )
 
         new_title = TenderNormalizer.text(
             scraped.get("Tender Title")
@@ -172,13 +202,15 @@ class TenderComparer:
 
                 "old": existing.title,
 
-                "new": scraped.get("Tender Title"),
+                "new": scraped.get(
+                    "Tender Title"
+                ),
 
             }
 
-        # ------------------------------------
-        # Closing Date
-        # ------------------------------------
+        # ======================================================
+        # CLOSING DATE
+        # ======================================================
 
         db_date = TenderNormalizer.date(
             existing.closing_date
@@ -194,13 +226,15 @@ class TenderComparer:
 
                 "old": existing.closing_date,
 
-                "new": scraped.get("Closing Date"),
+                "new": scraped.get(
+                    "Closing Date"
+                ),
 
             }
 
-        # ------------------------------------
-        # Tender URL
-        # ------------------------------------
+        # ======================================================
+        # TENDER URL
+        # ======================================================
 
         db_url = TenderNormalizer.url(
             existing.tender_url
@@ -216,13 +250,15 @@ class TenderComparer:
 
                 "old": existing.tender_url,
 
-                "new": scraped.get("Tender URL"),
+                "new": scraped.get(
+                    "Tender URL"
+                ),
 
             }
 
-        # ------------------------------------
-        # Corrigendum
-        # ------------------------------------
+        # ======================================================
+        # CORRIGENDUM TEXT
+        # ======================================================
 
         db_corr = TenderNormalizer.text(
             existing.corrigendum
@@ -238,12 +274,15 @@ class TenderComparer:
 
                 "old": existing.corrigendum,
 
-                "new": scraped.get("Corrigendum"),
+                "new": scraped.get(
+                    "Corrigendum"
+                ),
 
             }
-        # ------------------------------------
-        # Corrigendum URL
-        # ------------------------------------
+
+        # ======================================================
+        # CORRIGENDUM URL
+        # ======================================================
 
         db_corr_url = TenderNormalizer.url(
             existing.corrigendum_url
@@ -259,12 +298,17 @@ class TenderComparer:
 
                 "old": existing.corrigendum_url,
 
-                "new": scraped.get("Corrigendum URL"),
+                "new": scraped.get(
+                    "Corrigendum URL"
+                ),
 
             }
+
         return changes
 
-    # ----------------------------------------------------------
+    # ==========================================================
+    # DETECT POSSIBLE CORRIGENDUM
+    # ==========================================================
 
     def detect_corrigendum(
         self,
@@ -273,92 +317,121 @@ class TenderComparer:
         changes=None,
     ):
         """
-        Detect whether the scraped tender contains
-        a new or changed corrigendum.
+        Detect whether an updated tender MAY represent
+        a corrigendum.
 
-        A corrigendum can be detected through:
+        IMPORTANT:
 
-        1. Corrigendum text
-        2. Corrigendum URL
-        3. Closing-date change associated with a corrigendum
+        This method does NOT query the corrigendums table.
+
+        It only identifies a possible corrigendum based on
+        the scraped tender data.
+
+        TenderSyncService performs the final duplicate check.
         """
 
-        # ==================================================
-        # CURRENT SCRAPED CORRIGENDUM
-        # ==================================================
+        if not changes:
+            return False
 
-        current_corrigendum = (
-            scraped.get(
-                "Corrigendum",
-                "",
-            )
-            or ""
-        ).strip()
+        # ------------------------------------------------------
+        # Current scraped corrigendum data
+        # ------------------------------------------------------
 
-        current_corrigendum_url = (
-            scraped.get(
-                "Corrigendum URL",
-                "",
-            )
-            or ""
-        ).strip()
+        current_corrigendum = TenderNormalizer.text(
+            scraped.get("Corrigendum")
+        )
 
-        # ==================================================
-        # EXISTING CORRIGENDUM
-        # ==================================================
+        current_corrigendum_url = TenderNormalizer.url(
+            scraped.get("Corrigendum URL")
+        )
 
-        existing_corrigendum = (
+        # ------------------------------------------------------
+        # Existing parent tender corrigendum data
+        # ------------------------------------------------------
+
+        existing_corrigendum = TenderNormalizer.text(
             existing.corrigendum
-            or ""
-        ).strip()
+        )
 
-        existing_corrigendum_url = (
+        existing_corrigendum_url = TenderNormalizer.url(
             existing.corrigendum_url
-            or ""
-        ).strip()
+        )
 
-        # ==================================================
-        # NEW CORRIGENDUM TEXT
-        # ==================================================
-
-        if (
-            current_corrigendum
-            and current_corrigendum
-            != existing_corrigendum
-        ):
-            return True
-
-        # ==================================================
+        # ======================================================
         # NEW CORRIGENDUM URL
-        # ==================================================
+        # ======================================================
 
         if (
             current_corrigendum_url
-            and current_corrigendum_url
+            and
+            current_corrigendum_url
             != existing_corrigendum_url
         ):
+
             return True
 
-        # ==================================================
+        # ======================================================
+        # NEW CORRIGENDUM TEXT
+        # ======================================================
+
+        if (
+            current_corrigendum
+            and
+            current_corrigendum
+            != existing_corrigendum
+        ):
+
+            return True
+
+        # ======================================================
         # CLOSING DATE CHANGE
+        # ======================================================
         #
-        # A tender closing-date change should also be
-        # considered a corrigendum when corrigendum
-        # information exists.
-        # ==================================================
+        # A closing date change is considered a corrigendum
+        # candidate only when the scraped tender contains
+        # corrigendum information.
+        #
+        # Final duplicate detection is handled by
+        # TenderSyncService against corrigendums.document_url.
+        # ======================================================
 
-        if changes:
+        if "closing_date" in changes:
 
-            closing_change = changes.get(
-                "closing_date"
+            if (
+                current_corrigendum_url
+                or current_corrigendum
+            ):
+
+                return True
+
+        # ======================================================
+        # CORRIGENDUM FIELD CHANGED
+        # ======================================================
+
+        if "corrigendum" in changes:
+
+            new_corr = TenderNormalizer.text(
+                scraped.get("Corrigendum")
             )
 
-            if closing_change:
+            old_corr = TenderNormalizer.text(
+                existing.corrigendum
+            )
 
-                if (
-                    current_corrigendum
-                    or current_corrigendum_url
-                ):
-                    return True
+            if new_corr and new_corr != old_corr:
+                return True
+
+        if "corrigendum_url" in changes:
+
+            new_url = TenderNormalizer.url(
+                scraped.get("Corrigendum URL")
+            )
+
+            old_url = TenderNormalizer.url(
+                existing.corrigendum_url
+            )
+
+            if new_url and new_url != old_url:
+                return True
 
         return False

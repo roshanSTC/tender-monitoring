@@ -49,7 +49,7 @@ class CorrigendumService:
         )
 
         if exists:
-            return exists
+            return exists, False
 
         # -----------------------------------------------------
         # Check by document URL
@@ -70,7 +70,7 @@ class CorrigendumService:
             )
 
             if exists:
-                return exists
+                return exists, False
 
         # -----------------------------------------------------
         # Create
@@ -105,13 +105,12 @@ class CorrigendumService:
         )
 
         db.add(corrigendum)
-        print(corrigendum.id)
         db.flush() 
 
         # NO db.commit()
         # NO db.refresh()
 
-        return corrigendum
+        return corrigendum, True
 
     # =========================================================
     # GET BY TENDER

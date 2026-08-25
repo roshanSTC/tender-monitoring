@@ -138,14 +138,16 @@ def main():
 
         updated_tenders = sync_result["updated"]
 
-        corrigendums = sync_result["corrigendums"]
+        corrigendum_candidates = (
+                sync_result["corrigendum_candidates"]
+            )
 
         print("=" * 60)
         print("Synchronization Summary")
         print("=" * 60)
         print(f"New Tenders     : {sync_summary['new_tenders']}")
         print(f"Updated Tenders : {sync_summary['updated_tenders']}")
-        print(f"Corrigendums    : {sync_summary['corrigendums']}")
+        print(f"Corrigendums    : {sync_summary['corrigendums_created']}")
         print(f"Unchanged       : {sync_summary['unchanged']}")
         print("=" * 60)
         

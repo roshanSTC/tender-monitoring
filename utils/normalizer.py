@@ -209,6 +209,8 @@ class TenderNormalizer:
             "%d-%B-%Y %I:%M %p",
             "%d/%B/%Y %I:%M %p",
             "%d %B %Y %I:%M %p",
+            
+            "%d/%b/%Y %I:%M %p",
 
         ]
 

@@ -47,6 +47,7 @@ DATE_FORMATS = [
     "%d-%B-%Y %I:%M %p",
     "%d-%B-%Y %H:%M",
     "%d-%B-%Y",
+    "%d/%b/%Y %I:%M %p",
 ]
 
 
