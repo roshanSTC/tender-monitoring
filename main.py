@@ -21,7 +21,7 @@ from services.notification_service import (
     send_batch_emails,
 )
 from config import logger, TENDER_SITES
-sheet = GoogleSheet()
+# sheet = GoogleSheet()
 db = SessionLocal()
 
 
