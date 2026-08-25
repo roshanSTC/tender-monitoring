@@ -13,7 +13,7 @@ from services.filter import TenderFilter
 from notifications.mailer import TenderMailer
 from services.tender_repository import TenderRepository
 from services.tender_sync_service import TenderSyncService
-from storage.google_sheet import GoogleSheet
+# from storage.google_sheet import GoogleSheet
 from services.tender_service import save_new_tenders
 from services.notification_service import (
     prepare_batch_notifications,
