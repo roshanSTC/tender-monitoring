@@ -31,34 +31,8 @@ ALLOWED_SORT_FIELDS = {
 }
 
 
-def parse_tender_date(value):
+from utils.date_utils import parse_tender_date
 
-    if not value:
-        return None
-
-    value = str(value).strip()
-
-    formats = [
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%Y-%m-%d",
-        "%d-%m-%Y %H:%M:%S",
-        "%d-%m-%Y %H:%M",
-        "%d-%m-%Y",
-    ]
-
-    for date_format in formats:
-
-        try:
-            return datetime.strptime(
-                value,
-                date_format
-            )
-
-        except ValueError:
-            continue
-
-    return None
 
 
 def sort_tenders(tenders, sort_by, sort_order):
@@ -753,29 +727,10 @@ def get_active_tenders():
             if not tender.closing_date:
                 continue
 
-            closing_date = None
-
-            # Try supported formats
-            formats = [
-                "%Y-%m-%d %H:%M:%S",
-                "%Y-%m-%d %H:%M",
-                "%Y-%m-%d",
-                "%d-%m-%Y %H:%M:%S",
-                "%d-%m-%Y %H:%M",
-                "%d-%m-%Y",
-            ]
-
-            for date_format in formats:
-
-                try:
-                    closing_date = datetime.strptime(
-                        tender.closing_date.strip(),
-                        date_format
-                    )
-                    break
-
-                except ValueError:
-                    continue
+            closing_date = parse_tender_date(
+                tender.closing_date,
+                log_invalid=False
+            )
 
             # Invalid date -> skip
             if closing_date is None:
