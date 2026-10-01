@@ -131,15 +131,34 @@ FRONTEND_URL = os.getenv(
 
 
 # -------------------------
+# Security & CORS
+# -------------------------
+
+JWT_SECRET_KEY = os.getenv(
+    "JWT_SECRET_KEY",
+    "spmcil-tender-monitoring-default-secret-change-in-production"
+)
+
+raw_cors = os.getenv("CORS_ORIGINS", "")
+if raw_cors:
+    CORS_ORIGINS = [o.strip() for o in raw_cors.split(",") if o.strip()]
+else:
+    CORS_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        FRONTEND_URL
+    ]
+
+# -------------------------
 # Email
 # -------------------------
 
-EMAIL_SENDER = os.getenv("EMAIL_SENDER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
+EMAIL_SENDER = os.getenv("EMAIL_SENDER", "")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
+EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER", "")
 
-SMTP_SERVER = os.getenv("SMTP_SERVER")
-SMTP_PORT = int(os.getenv("SMTP_PORT"))
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 
 MAIL_FROM = os.getenv(
     "MAIL_FROM",
@@ -147,7 +166,7 @@ MAIL_FROM = os.getenv(
 )
 
 # -------------------------
-# Logging
+# Production Logging
 # -------------------------
 
 LOG_DIR = "logs"
@@ -155,10 +174,38 @@ LOG_DIR = "logs"
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
-logging.basicConfig(
-    filename=f"{LOG_DIR}/app.log",
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-)
+from logging.handlers import RotatingFileHandler
 
-logger = logging.getLogger(__name__)
+class SafeRotatingFileHandler(RotatingFileHandler):
+    """
+    Cross-platform rotating file handler that gracefully handles
+    Windows file lock contention during rollover.
+    """
+    def doRollover(self):
+        try:
+            super().doRollover()
+        except (PermissionError, OSError):
+            pass
+
+logger = logging.getLogger("tender_monitoring")
+logger.setLevel(logging.INFO)
+
+if not logger.handlers:
+    # Rotating file handler: 10MB per file, max 5 backup files
+    file_handler = SafeRotatingFileHandler(
+        filename=os.path.join(LOG_DIR, "app.log"),
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+        delay=True
+    )
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    # Console stream handler for Docker and terminal output
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)

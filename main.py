@@ -21,8 +21,6 @@ from services.notification_service import (
     send_batch_emails,
 )
 from config import logger, TENDER_SITES
-# sheet = GoogleSheet()
-db = SessionLocal()
 
 
 def main():
@@ -36,6 +34,7 @@ def main():
     scraper = TenderScraper()
     mailer = TenderMailer()
     filter_obj = TenderFilter()
+    db = SessionLocal()
 
     try:
 
@@ -345,6 +344,10 @@ def main():
             "success": False,
             "error": str(e)
         }
+
+    finally:
+        db.close()
+        logger.info("Database session closed.")
 
 
 if __name__ == "__main__":

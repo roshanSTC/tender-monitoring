@@ -12,9 +12,19 @@ if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not configured in .env")
 
 
+# Production connection pool parameters
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))
+POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
+    pool_size=POOL_SIZE,
+    max_overflow=MAX_OVERFLOW,
+    pool_recycle=POOL_RECYCLE,
+    pool_timeout=POOL_TIMEOUT,
 )
 
 
@@ -26,6 +36,7 @@ SessionLocal = sessionmaker(
 
 
 def get_db():
+    """Generator dependency for Flask or FastAPI-like dependency injection."""
     db = SessionLocal()
 
     try:
@@ -33,6 +44,7 @@ def get_db():
 
     finally:
         db.close()
+
 
 
 def test_connection():

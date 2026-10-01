@@ -5,7 +5,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_swagger_ui import get_swaggerui_blueprint
 from main import main
-from config import logger
+from config import logger, JWT_SECRET_KEY, CORS_ORIGINS
 from database.connection import test_connection
 from routes.notifications import notifications_bp
 from routes.preferences import preferences_bp
@@ -18,24 +18,44 @@ from routes.corrigendums import corrigendum_bp
 
 app = Flask(__name__)
 
-# CORS
+# Production CORS
 CORS(
     app,
     resources={
         r"/api/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173"
-            ]
+            "origins": CORS_ORIGINS
         }
     }
 )
 
-
-# JWT configuration
-app.config["JWT_SECRET_KEY"] = "change-this-to-a-long-random-secret"
+# JWT configuration from environment
+app.config["JWT_SECRET_KEY"] = JWT_SECRET_KEY
 
 jwt = JWTManager(app)
+
+
+@jwt.unauthorized_loader
+def unauthorized_callback(callback):
+    return jsonify({
+        "success": False,
+        "message": "Authorization header missing or invalid. Please log in."
+    }), 401
+
+
+@jwt.invalid_token_loader
+def invalid_token_callback(callback):
+    return jsonify({
+        "success": False,
+        "message": "Invalid JWT token."
+    }), 401
+
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    return jsonify({
+        "success": False,
+        "message": "JWT token has expired. Please log in again."
+    }), 401
 
 # Blueprint
 app.register_blueprint(auth_bp)
@@ -142,6 +162,44 @@ def database_health():
     return jsonify({
         "status": "error",
         "database": "disconnected"
+    }), 500
+
+
+# ============================================================
+# GLOBAL ERROR HANDLERS (Standard JSON responses)
+# ============================================================
+
+@app.errorhandler(400)
+def handle_bad_request(e):
+    return jsonify({
+        "success": False,
+        "message": "Bad request.",
+        "error": str(e)
+    }), 400
+
+
+@app.errorhandler(404)
+def handle_not_found(e):
+    return jsonify({
+        "success": False,
+        "message": "The requested resource was not found."
+    }), 404
+
+
+@app.errorhandler(405)
+def handle_method_not_allowed(e):
+    return jsonify({
+        "success": False,
+        "message": "HTTP method not allowed for this route."
+    }), 405
+
+
+@app.errorhandler(500)
+def handle_internal_server_error(e):
+    logger.exception(f"Unhandled 500 Server Error: {e}")
+    return jsonify({
+        "success": False,
+        "message": "Internal server error occurred."
     }), 500
 
 

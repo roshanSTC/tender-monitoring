@@ -1,9 +1,0 @@
-*.html
-*.xlsx
-.env
-token.json
-credentials.json
-node_modules/
-test*
-.pyc
-__pycache__

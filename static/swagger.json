@@ -1,0 +1,2259 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Tender Monitoring System API",
+    "description": "API documentation and testing interface for the SPMCIL / BRBNMPL / BNPM Tender Monitoring & Intelligence System.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Tender Monitoring Support"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current Server (Local / Production)"
+    },
+    {
+      "url": "http://127.0.0.1:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token obtained from `/api/auth/login`. Example: `eyJhbGciOi...`"
+      }
+    },
+    "schemas": {
+      "StandardError": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "An error occurred."
+          },
+          "error": {
+            "type": "string",
+            "example": "Detailed error message"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "StrongPassword123!"
+          }
+        }
+      },
+      "SetPasswordRequest": {
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "a1b2c3d4e5f6..."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "NewSecurePassword123!"
+          }
+        }
+      },
+      "PreferenceCreateRequest": {
+        "type": "object",
+        "required": [
+          "preference_type",
+          "preference_value"
+        ],
+        "properties": {
+          "preference_type": {
+            "type": "string",
+            "enum": [
+              "keyword",
+              "website"
+            ],
+            "example": "keyword"
+          },
+          "preference_value": {
+            "type": "string",
+            "example": "Security Thread"
+          }
+        }
+      },
+      "PreferenceUpdateRequest": {
+        "type": "object",
+        "required": [
+          "preference_value"
+        ],
+        "properties": {
+          "preference_value": {
+            "type": "string",
+            "example": "Voith Spare"
+          }
+        }
+      },
+      "UserInviteRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "name"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "newuser@example.com"
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "ADMIN"
+            ],
+            "default": "USER",
+            "example": "USER"
+          }
+        }
+      },
+      "UserStatusUpdateRequest": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED",
+              "INVITED"
+            ],
+            "example": "ACTIVE"
+          }
+        }
+      },
+      "Tender": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "tender_number": {
+            "type": "string",
+            "example": "SPMCIL/2026/001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Supply of Security Thread and Paper Chemicals"
+          },
+          "source": {
+            "type": "string",
+            "example": "SPMCIL Corporate"
+          },
+          "unit_name": {
+            "type": "string",
+            "example": "CNP Nashik"
+          },
+          "publishing_date": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-15 10:00:00"
+          },
+          "closing_date": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-30 15:00:00"
+          },
+          "tender": {
+            "type": "string",
+            "example": "Tender Document.pdf"
+          },
+          "tender_url": {
+            "type": "string",
+            "example": "https://spmcil.com/tenders/doc1.pdf"
+          },
+          "corrigendum": {
+            "type": "string",
+            "example": "Corrigendum-1"
+          },
+          "corrigendum_url": {
+            "type": "string",
+            "example": "https://spmcil.com/tenders/corr1.pdf"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System & Health",
+      "description": "Core monitor health check and scraper execution"
+    },
+    {
+      "name": "Authentication",
+      "description": "User login, password setup, and profile inspection"
+    },
+    {
+      "name": "Tenders",
+      "description": "Tender searching, filtering, and detailed inspection"
+    },
+    {
+      "name": "Corrigendums",
+      "description": "Amendment tracking, changes breakdown, and risk scoring"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Analytics, statistics, graphs, and aggregated overview"
+    },
+    {
+      "name": "Notifications",
+      "description": "In-app notifications and unread management"
+    },
+    {
+      "name": "Preferences",
+      "description": "Personalized tender keyword and website tracking preferences"
+    },
+    {
+      "name": "Admin - Users",
+      "description": "Admin user invitations and role/status lifecycle"
+    },
+    {
+      "name": "Admin - Dashboard",
+      "description": "Admin metrics and invitation summaries"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "System & Health"
+        ],
+        "summary": "Health Check",
+        "description": "Returns status confirming the SPMCIL Tender Monitor server is operational.",
+        "responses": {
+          "200": {
+            "description": "Server is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "SPMCIL Tender Monitor is Running"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run": {
+      "get": {
+        "tags": [
+          "System & Health"
+        ],
+        "summary": "Run Scraper & Sync Workflow",
+        "description": "Triggers the full scraping cycle across all 12+ sites, synchronizes new and updated tenders, creates corrigendums, and dispatches batch notifications.",
+        "responses": {
+          "200": {
+            "description": "Scraping completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "total_scraped": {
+                      "type": "integer",
+                      "example": 150
+                    },
+                    "new_tenders": {
+                      "type": "integer",
+                      "example": 5
+                    },
+                    "matched_tenders": {
+                      "type": "integer",
+                      "example": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Scraper is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Scraping failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health/db": {
+      "get": {
+        "tags": [
+          "System & Health"
+        ],
+        "summary": "Database Health Check",
+        "description": "Tests connectivity to the PostgreSQL database.",
+        "responses": {
+          "200": {
+            "description": "Database connected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "connected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database disconnected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "disconnected"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "User Login",
+        "description": "Authenticates user with email and password, returning a JWT access token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Login successful."
+                    },
+                    "access_token": {
+                      "type": "string",
+                      "example": "eyJhbGciOi..."
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Roshan Tambe"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "roshan@example.com"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "ADMIN"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "ACTIVE"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/set-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Set Password from Invitation Token",
+        "description": "Validates the user invitation token and sets the initial password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Password created successfully."
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get Current Authenticated User",
+        "description": "Returns profile information for the authenticated JWT user.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Roshan Tambe"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "roshan@example.com"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "ADMIN"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "ACTIVE"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized / Invalid JWT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenders": {
+      "get": {
+        "tags": [
+          "Tenders"
+        ],
+        "summary": "List Tenders",
+        "description": "Fetches paginated tenders with optional source and unit filtering and flexible sorting.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Items per page (max 100)"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by source name (e.g., SPMCIL Corporate)"
+          },
+          {
+            "name": "unit_name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by unit name (e.g., CNP Nashik)"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "title",
+                "source",
+                "unit_name",
+                "tender_number",
+                "publishing_date",
+                "closing_date"
+              ],
+              "default": "created_at"
+            },
+            "description": "Sort field"
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "description": "Sort order"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of tenders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "page": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "example": 20
+                    },
+                    "total": {
+                      "type": "integer",
+                      "example": 120
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 20
+                    },
+                    "tenders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tender"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenders/search": {
+      "get": {
+        "tags": [
+          "Tenders"
+        ],
+        "summary": "Search Tenders",
+        "description": "Searches tenders across title, tender number, source, and unit name.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search term / keyword"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching tenders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "query": {
+                      "type": "string",
+                      "example": "security"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "example": 20
+                    },
+                    "total": {
+                      "type": "integer",
+                      "example": 15
+                    },
+                    "tenders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tender"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenders/filter": {
+      "get": {
+        "tags": [
+          "Tenders"
+        ],
+        "summary": "Advanced Tender Filter",
+        "description": "Filters tenders by source, unit, publishing dates, and closing dates.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unit_name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "publishing_date_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "YYYY-MM-DD"
+          },
+          {
+            "name": "publishing_date_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "YYYY-MM-DD"
+          },
+          {
+            "name": "closing_date_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "YYYY-MM-DD"
+          },
+          {
+            "name": "closing_date_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "YYYY-MM-DD"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Filtered tenders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "tenders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tender"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenders/active": {
+      "get": {
+        "tags": [
+          "Tenders"
+        ],
+        "summary": "Get Active Tenders",
+        "description": "Fetches all tenders whose closing date has not yet passed.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active tenders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "tenders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tender"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenders/{tender_id}": {
+      "get": {
+        "tags": [
+          "Tenders"
+        ],
+        "summary": "Get Tender by ID",
+        "description": "Retrieves comprehensive details for a specific tender, including corrigendum count, highest risk score, and risk level.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tender_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tender details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "tender": {
+                      "$ref": "#/components/schemas/Tender"
+                    },
+                    "corrigendums": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 2
+                        },
+                        "risk_level": {
+                          "type": "string",
+                          "example": "MEDIUM"
+                        },
+                        "risk_score": {
+                          "type": "integer",
+                          "example": 20
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tender not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/corrigendums/tender/{tender_id}": {
+      "get": {
+        "tags": [
+          "Corrigendums"
+        ],
+        "summary": "Get Corrigendum History for Tender",
+        "description": "Fetches the full timeline of corrigendums/amendments for a tender, including old vs. new closing dates, categories, risk scores, and detected changes.",
+        "parameters": [
+          {
+            "name": "tender_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Corrigendum timeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "corrigendum_no": {
+                            "type": "string",
+                            "example": "Corr-1"
+                          },
+                          "document_url": {
+                            "type": "string"
+                          },
+                          "old_closing_date": {
+                            "type": "string"
+                          },
+                          "new_closing_date": {
+                            "type": "string"
+                          },
+                          "risk_level": {
+                            "type": "string",
+                            "example": "MEDIUM"
+                          },
+                          "risk_score": {
+                            "type": "integer",
+                            "example": 20
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "summary": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/corrigendums/recent": {
+      "get": {
+        "tags": [
+          "Corrigendums"
+        ],
+        "summary": "Get Recent Corrigendums",
+        "description": "Fetches the latest corrigendums across all tenders.",
+        "responses": {
+          "200": {
+            "description": "Recent corrigendums list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "corrigendums": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/corrigendums/{corrigendum_id}": {
+      "get": {
+        "tags": [
+          "Corrigendums"
+        ],
+        "summary": "Get Corrigendum Details",
+        "description": "Retrieves specific corrigendum information by ID.",
+        "parameters": [
+          {
+            "name": "corrigendum_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Corrigendum details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "corrigendum": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "User Dashboard Analytics",
+        "description": "Returns comprehensive statistics, source breakdowns, 7-day activity graphs, recent tenders, and unread notification metrics for the current user.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "total_tenders": {
+                          "type": "integer",
+                          "example": 150
+                        },
+                        "active_tenders": {
+                          "type": "integer",
+                          "example": 45
+                        },
+                        "tenders_today": {
+                          "type": "integer",
+                          "example": 4
+                        },
+                        "tenders_this_week": {
+                          "type": "integer",
+                          "example": 18
+                        },
+                        "unread_notifications": {
+                          "type": "integer",
+                          "example": 3
+                        },
+                        "matched_tenders": {
+                          "type": "integer",
+                          "example": 12
+                        }
+                      }
+                    },
+                    "tenders_by_source": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "source": {
+                            "type": "string",
+                            "example": "CNP Nashik"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "example": 25
+                          }
+                        }
+                      }
+                    },
+                    "tender_activity": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "example": "2026-09-30"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "example": 5
+                          }
+                        }
+                      }
+                    },
+                    "recent_tenders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tender"
+                      }
+                    },
+                    "recent_notifications": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Get User Notifications",
+        "description": "Lists all in-app notifications for the logged-in user in reverse chronological order.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User notifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 5
+                    },
+                    "notifications": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/unread-count": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Get Unread Notification Count",
+        "description": "Quickly returns the count of unread notifications for badge counters.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unread count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "unread_count": {
+                      "type": "integer",
+                      "example": 3
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/{notification_id}/read": {
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark Notification as Read",
+        "description": "Marks a specific notification as read.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marked as read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Notification marked as read."
+                    },
+                    "notification_id": {
+                      "type": "integer",
+                      "example": 10
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Notification not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark All Notifications as Read",
+        "description": "Marks all unread notifications for the current user as read.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All notifications marked as read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "All notifications marked as read."
+                    },
+                    "updated_count": {
+                      "type": "integer",
+                      "example": 5
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/{notification_id}/tenders": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Get Tenders in Batch Notification",
+        "description": "Fetches all tenders bundled inside a specific batch notification.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenders linked to notification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "notification_id": {
+                      "type": "integer"
+                    },
+                    "notification_title": {
+                      "type": "string"
+                    },
+                    "tender_count": {
+                      "type": "integer"
+                    },
+                    "tenders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tender"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Notification not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/preferences": {
+      "get": {
+        "tags": [
+          "Preferences"
+        ],
+        "summary": "Get User Preferences",
+        "description": "Retrieves the list of keyword and website preferences saved by the user.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 3
+                    },
+                    "preferences": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "preference_type": {
+                            "type": "string",
+                            "example": "keyword"
+                          },
+                          "preference_value": {
+                            "type": "string",
+                            "example": "Security Thread"
+                          },
+                          "is_active": {
+                            "type": "boolean",
+                            "example": true
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Preferences"
+        ],
+        "summary": "Create Preference",
+        "description": "Registers a new keyword or website preference for automated tender matching.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Preference created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Preference created successfully."
+                    },
+                    "preference": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Preference already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/preferences/{preference_id}": {
+      "put": {
+        "tags": [
+          "Preferences"
+        ],
+        "summary": "Update Preference",
+        "description": "Modifies the value of an existing preference.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preference_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preference updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Preference updated successfully."
+                    },
+                    "preference": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Preference not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate preference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Preferences"
+        ],
+        "summary": "Delete Preference",
+        "description": "Removes a keyword or website preference.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preference_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preference deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Preference deleted successfully."
+                    },
+                    "preference_id": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Preference not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/preferences/{preference_id}/toggle": {
+      "patch": {
+        "tags": [
+          "Preferences"
+        ],
+        "summary": "Toggle Preference Active State",
+        "description": "Enables or disables tender matching for this preference without deleting it.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preference_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preference toggled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Preference enabled successfully."
+                    },
+                    "preference_id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Preference not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": [
+          "Admin - Users"
+        ],
+        "summary": "List All Users",
+        "description": "Lists all system users, roles, statuses, and registration timestamps.",
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/invite": {
+      "post": {
+        "tags": [
+          "Admin - Users"
+        ],
+        "summary": "Invite New User",
+        "description": "Generates a 48-hour secure invitation token and sends an onboarding invitation email.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserInviteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Invitation created successfully."
+                    },
+                    "user": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/resend": {
+      "post": {
+        "tags": [
+          "Admin - Users"
+        ],
+        "summary": "Resend Invitation Email",
+        "description": "Refreshes the invitation token and re-sends the invitation email to a pending user.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitation resent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Invitation resent successfully."
+                    },
+                    "user": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User is already active",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/status": {
+      "patch": {
+        "tags": [
+          "Admin - Users"
+        ],
+        "summary": "Update User Status",
+        "description": "Changes user status between ACTIVE, DISABLED, or INVITED.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserStatusUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User status updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "User updated successfully."
+                    },
+                    "user": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid status value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}": {
+      "delete": {
+        "tags": [
+          "Admin - Users"
+        ],
+        "summary": "Delete User",
+        "description": "Permanently deletes a user and cascades deletion of their preferences and notifications.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "User deleted successfully."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dashboard": {
+      "get": {
+        "tags": [
+          "Admin - Dashboard"
+        ],
+        "summary": "Admin Overview Metrics",
+        "description": "Returns counts for total users, active users, pending invitations, disabled users, and the 5 most recent invitations.",
+        "responses": {
+          "200": {
+            "description": "Admin overview statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "total_users": {
+                          "type": "integer",
+                          "example": 25
+                        },
+                        "active_users": {
+                          "type": "integer",
+                          "example": 20
+                        },
+                        "pending_invitations": {
+                          "type": "integer",
+                          "example": 4
+                        },
+                        "disabled_users": {
+                          "type": "integer",
+                          "example": 1
+                        }
+                      }
+                    },
+                    "recent_invitations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

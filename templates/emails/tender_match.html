@@ -1,0 +1,216 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+
+<style>
+
+body{
+    margin:0;
+    padding:20px;
+    background:#f4f6f8;
+    font-family:Arial,Helvetica,sans-serif;
+    color:#333;
+}
+
+.container{
+    max-width:1100px;
+    margin:auto;
+    background:#ffffff;
+    border-radius:8px;
+    overflow:hidden;
+}
+
+.header{
+    background:#1e3a8a;
+    color:#ffffff;
+    padding:20px;
+}
+
+.header h2{
+    margin:0;
+}
+
+.section-title{
+    font-size:20px;
+    font-weight:bold;
+    color:#1e3a8a;
+    margin:20px 0;
+}
+
+.source-header{
+    background:#365b9d;
+    color:white;
+    padding:10px 15px;
+    font-weight:bold;
+    border-radius:4px 4px 0 0;
+}
+
+.badge{
+    background:white;
+    color:#365b9d;
+    padding:3px 10px;
+    border-radius:20px;
+    font-size:12px;
+    margin-left:10px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+}
+
+th{
+    background:#dce8d3;
+    border:1px solid #999;
+    padding:12px;
+    text-align:center;
+    font-size:14px;
+}
+
+td{
+    border:1px solid #999;
+    padding:10px;
+    font-size:13px;
+    vertical-align:top;
+}
+
+.link{
+    color:#2563eb;
+    font-weight:bold;
+    text-decoration:none;
+}
+
+.footer{
+    margin-top:30px;
+    padding-top:20px;
+    border-top:1px solid #ddd;
+    color:#666;
+    font-size:12px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h2>Tender Monitoring System</h2>
+        <p>
+            {{ tender_count }} Tender(s) Matching Your Preferences
+        </p>
+    </div>
+
+    <div style="padding:20px;">
+
+        <div class="section-title">
+            Matching Tender Details
+        </div>
+
+        {% for source, source_tenders in grouped_tenders.items() %}
+
+        <div class="source-header">
+            🏢 {{ source }}
+            <span class="badge">
+                {{ source_tenders|length }} Tender(s)
+            </span>
+        </div>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Tender Number</th>
+                    <th>Tender Title</th>
+                    <th>Keyword</th>
+                    <th>Publishing Date</th>
+                    <th>Closing Date</th>
+                    <th>Tender Document</th>
+                    <th>Corrigendum</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            {% for tender in source_tenders %}
+
+                <tr>
+
+                    <td>
+                        {{ tender["Tender Number"] }}
+                    </td>
+
+                    <td>
+                        {{ tender["Tender Title"] }}
+                    </td>
+
+                    <td>
+                        {{ tender.get("Matched Keyword","-") }}
+                    </td>
+
+                    <td>
+                        {{ tender["Publishing Date"] }}
+                    </td>
+
+                    <td>
+                        {{ tender["Closing Date"] }}
+                    </td>
+
+                    <td>
+
+                        {% if tender.get("Tender URL") %}
+
+                        <a
+                            href="{{ tender['Tender URL'] }}"
+                            class="link"
+                        >
+                            Download
+                        </a>
+
+                        {% else %}
+                            -
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        {% if tender.get("Corrigendum URL") %}
+
+                        <a
+                            href="{{ tender['Corrigendum URL'] }}"
+                            class="link"
+                        >
+                            View
+                        </a>
+
+                        {% else %}
+                            -
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        {% endfor %}
+
+        <div class="footer">
+            This is an automated email from Tender Monitoring System.
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
