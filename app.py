@@ -1,8 +1,9 @@
 
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, redirect, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_swagger_ui import get_swaggerui_blueprint
 from main import main
 from config import logger
 from database.connection import test_connection
@@ -45,6 +46,36 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(admin_users_bp)
 app.register_blueprint(admin_dashboard_bp)
 app.register_blueprint(corrigendum_bp)
+
+# ============================================================
+# SWAGGER UI CONFIGURATION
+# ============================================================
+SWAGGER_URL = "/docs"
+API_URL = "/swagger.json"
+
+swaggerui_bp = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        "app_name": "Tender Monitoring System API",
+        "persistAuthorization": True,
+        "docExpansion": "list",
+    },
+)
+app.register_blueprint(swaggerui_bp, url_prefix=SWAGGER_URL)
+
+
+@app.route("/swagger")
+def swagger_redirect():
+    """Redirect /swagger to /docs for convenience."""
+    return redirect("/docs", code=302)
+
+
+@app.route("/swagger.json")
+def swagger_spec():
+    """Serve OpenAPI / Swagger JSON specification."""
+    return send_from_directory("static", "swagger.json")
+
 
 running = False
 
@@ -119,8 +150,9 @@ if __name__ == "__main__":
     print("=" * 70)
     print("Starting Flask Server...")
     print("SPMCIL Tender Monitor API")
-    print("Local URL : http://127.0.0.1:5000")
-    print("Run API   : http://127.0.0.1:5000/run")
+    print("Local URL  : http://127.0.0.1:5000")
+    print("Swagger UI : http://127.0.0.1:5000/docs")
+    print("Run API    : http://127.0.0.1:5000/run")
     print("=" * 70)
 
     app.run(

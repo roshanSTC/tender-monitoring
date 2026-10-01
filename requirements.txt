@@ -1,6 +1,6 @@
 beautifulsoup4==4.12.3
 requests==2.32.3
-pandas==2.2.3
+pandas>=2.3.0
 
 gspread==6.1.2
 google-auth==2.35.0
@@ -11,7 +11,7 @@ python-dotenv==1.0.1
 
 schedule==1.2.2
 
-lxml==5.3.0
+lxml>=5.3.0
 
 openpyxl==3.1.5
 
@@ -20,10 +20,10 @@ gunicorn==23.0.0
 
 # Database
 SQLAlchemy==2.0.43
-psycopg2-binary==2.9.10
+psycopg2-binary>=2.9.13
 
 # Frontend/API integration
 flask-cors==6.0.1
-
 Flask-JWT-Extended==4.7.1
 bcrypt==4.3.0
+flask-swagger-ui==5.33.0
