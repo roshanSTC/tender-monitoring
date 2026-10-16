@@ -1,0 +1,54 @@
+# ====================================
+# Secrets & Credentials
+# ====================================
+.env
+.env.*
+*.env
+credentials.json
+token.json
+service_account*.json
+*.pem
+*.key
+*.p12
+
+# ====================================
+# Logs
+# ====================================
+logs/
+*.log
+
+# ====================================
+# Bytecode & Cache
+# ====================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ====================================
+# Virtual Environments
+# ====================================
+.venv/
+venv/
+env/
+ENV/
+
+# ====================================
+# Local Data & Scraped Files
+# ====================================
+*.xlsx
+*.xls
+*.csv
+*.html
+*.pdf
+scratch/
+
+# ====================================
+# IDE & System Files
+# ====================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
