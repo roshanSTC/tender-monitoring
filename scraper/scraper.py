@@ -1,35 +1,26 @@
 """
 scraper.py
 
-Scrapes SPMCIL tenders and stores them in an Excel file.
+Orchestrates scraping of SPMCIL, BRBNMPL, and BNPM tender sites.
 """
-
-from datetime import datetime
-
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
 from config import TENDER_SITES, logger
-
-
-from datetime import datetime
-
 from scraper.parsers.bnpm import parse_bnpm
 from scraper.parsers.brbnmpl import parse_brbnmpl
 from scraper.parsers.spmcil.corporate import parse_corporate_table
 from scraper.parsers.spmcil.noida import parse_noida_page
 from scraper.parsers.unit_sites import parse_unit_table
+from utils.status import get_status
 
-
-
-    
-    
 
 class TenderScraper:
+    """HTTP client and scraper orchestrator for tender portals."""
 
     def __init__(self):
-
         self.session = requests.Session()
 
         retries = Retry(
@@ -40,7 +31,6 @@ class TenderScraper:
         )
 
         adapter = HTTPAdapter(max_retries=retries)
-
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
 
@@ -52,94 +42,75 @@ class TenderScraper:
             )
         }
 
-    # --------------------------------------------------------
-
-    def fetch_page(self, url, site_name ):
-
-        logger.info(f"Fetching {url}")
+    def fetch_page(self, url: str, site_name: str = "") -> str:
+        """Fetch HTML content from a URL using configured retries and timeouts."""
+        label = f"{site_name} ({url})" if site_name else url
+        logger.info(f"Fetching {label}")
 
         response = self.session.get(
             url,
             headers=self.headers,
-            timeout=30
+            timeout=30,
         )
-
         response.raise_for_status()
-        
-       
-
         return response.text
 
-# --------------------------------------------------------
-    
-    def get_existing_tenders(self):
+    def scrape(self, site: dict) -> list:
+        """Scrape tenders for a single site definition."""
+        site_type = site.get("type")
+        site_name = site.get("name", "")
 
-        wb = load_workbook(EXCEL_FILE)
-
-        ws = wb.active
-
-        existing = set()
-
-        for row in ws.iter_rows(min_row=2, values_only=True):
-
-            source = str(row[0]).strip() if row[0] else ""
-
-            tender_no = str(row[2]).strip() if row[2] else ""
-
-            if source and tender_no:
-
-                existing.add(f"{source}|{tender_no}")
-
-        wb.close()
-
-        return existing
-
-    # --------------------------------------------------------
-    # --------------------------------------------------------
-
-    def scrape(self, site):
-
-        html = self.fetch_page(site["url"], site["name"])
-
-        if site["type"] == "corporate":
-            tenders = parse_corporate_table(html)
-
-        elif site["name"] == "IGM Noida":
-            tenders = parse_noida_page(html, site)
-        
-        elif site["type"] == "brbnmpl":
-            return parse_brbnmpl(site)
-
-        elif site["type"] == "bnpm":
-            return parse_bnpm(site)
-
+        # Sites with dedicated self-fetching parsers
+        if site_type == "brbnmpl":
+            tenders = parse_brbnmpl(site)
+        elif site_type == "bnpm":
+            tenders = parse_bnpm(site)
         else:
-            tenders = parse_unit_table(html, site)
+            html = self.fetch_page(site["url"], site_name)
+            if site_type == "corporate":
+                tenders = parse_corporate_table(html)
+            elif site_name == "IGM Noida":
+                tenders = parse_noida_page(html, site)
+            else:
+                tenders = parse_unit_table(html, site)
 
-        # Add source information to every tender
+        # Standardize source metadata and status for all tenders
         for tender in tenders:
-            tender["Source"] = site["name"]
-            tender["Source URL"] = site["url"]
+            tender.setdefault("Source", site_name)
+            tender.setdefault("Source URL", site.get("url", ""))
+
+            if "Status" not in tender or "Days Left" not in tender:
+                status, days_left = get_status(tender.get("Closing Date", ""))
+                tender.setdefault("Status", status)
+                tender.setdefault("Days Left", days_left)
 
         return tenders
 
+    def scrape_all(self, sites: list = None) -> list:
+        """Scrape tenders across all configured sites."""
+        target_sites = sites if sites is not None else TENDER_SITES
+        all_tenders = []
 
-# --------------------------------------------------------
+        for site in target_sites:
+            try:
+                logger.info(f"Scraping: {site.get('name')}")
+                tenders = self.scrape(site)
+                all_tenders.extend(tenders)
+                logger.info(f"{site.get('name')} -> {len(tenders)} tenders scraped")
+            except Exception as e:
+                logger.exception(f"Failed to scrape {site.get('name')}: {e}")
 
-def get_tenders():
+        return all_tenders
 
+
+def get_tenders(sites: list = None) -> list:
+    """Convenience function to scrape all tenders."""
     scraper = TenderScraper()
+    return scraper.scrape_all(sites)
 
-    return scraper.scrape()
-
-
-# --------------------------------------------------------
 
 if __name__ == "__main__":
-
     tenders = get_tenders()
-
     print(f"\nTotal Scraped : {len(tenders)}")
-
-    for tender in tenders:
+    for tender in tenders[:5]:
         print(tender)

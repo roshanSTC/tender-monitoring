@@ -3,11 +3,11 @@ mailer.py
 
 Sends email notifications for newly added tenders.
 """
-from services.active_tenders import count_active_tenders
 from collections import defaultdict
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from utils.status import parse_date
 
 from config import (
     EMAIL_SENDER,
@@ -67,26 +67,6 @@ class TenderMailer:
         """
 
         today = datetime.now().date()
-
-        # --------------------------------------------------
-        # Supported date formats
-        # --------------------------------------------------
-
-        date_formats = [
-
-            "%d %b %Y %I:%M %p",
-            "%d %B %Y %I:%M %p",
-
-            "%d %b %Y",
-            "%d %B %Y",
-
-            "%d/%m/%Y",
-            "%d-%m-%Y",
-
-            "%d/%m/%Y %I:%M %p",
-            "%d-%m-%Y %I:%M %p",
-
-        ]
 
         # ==================================================
         # GROUP BY SOURCE
@@ -198,38 +178,15 @@ class TenderMailer:
 
                     closing_date = ""
 
-                closing = None
-
                 # --------------------------------------------------
-                # Parse closing date
+                # Parse closing date and calculate days left
                 # --------------------------------------------------
 
-                for date_format in date_formats:
+                closing = parse_date(closing_date)
 
-                    try:
-
-                        closing = datetime.strptime(
-                            closing_date,
-                            date_format
-                        )
-
-                        break
-
-                    except ValueError:
-
-                        continue
-
-                # --------------------------------------------------
-                # Calculate days left
-                # --------------------------------------------------
-
-                days_left = None
-
-                if closing:
-
-                    days_left = (
-                        closing.date() - today
-                    ).days
+                days_left = (
+                    closing.date() - today
+                ).days if closing else None
 
                 # --------------------------------------------------
                 # Days Left HTML
