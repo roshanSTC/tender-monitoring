@@ -68,6 +68,11 @@ TENDER_SITES = [
         "name": "BNPM India",
         "url": "https://www.bnpmindia.com/ViewActiveTender.aspx",
         "type": "bnpm"
+    },
+    {
+        "name": "GeM Portal",
+        "url": "https://bidplus.gem.gov.in/all-bids",
+        "type": "gem"
     }
 ]
 
@@ -87,13 +92,17 @@ GOOGLE_SHEET_NAME = os.getenv("GOOGLE_SHEET_NAME")
 
 # tender keywords
 KEYWORDS = [
-    "Security Thread",
-    "Fibre",
-    "Pasaban Spares",
-    "Third party IT",
-    "Voith  Spare",
-    "Isra Vision",
     "CNC Machine",
+    "E-Type Machine",
+    "Rimming Machine",
+    "Opacified Polymer Substrate Sheets",
+    "Physical Vapour Deposition System",
+    "Security Design Software",
+    "ICAO Compliant Electronic Contactless Inlays",
+    "CTOP",
+    "CSP-Manufacturing-plant",
+    "Colour Shift Pigment",
+    "Paper Line",
     "Clextral",
     "Schoen",
     "Schoen + Sandt",
@@ -102,11 +111,10 @@ KEYWORDS = [
     "Voith",
     "Bivis",
     "Lang",
-    "Slitter",
-    "Shitter",
     "Sheeter",
     "PM 5",
     "PM 6",
+    "Security Thread",
     "Fibres",
     "Fibers",
     "BCLP",
@@ -124,6 +132,26 @@ KEYWORDS = [
     "Polyvinyl Alcohol",
     "Schuler",
     "Vinsak",
+    "ICAO",
+    "Electronic Contactless Inlays",
+    "e-passport",
+    "Development Tender",
+    "Refurbishment and Modernization of Coining Presses",
+    "Thales",
+    "NATIONAL COMPETITIVE BID",
+    "Global Tender",
+    "CATIONIC UV CURING OVER-PRINT VARNISH",
+    "Varnish",
+    "Egates",
+    "Border Control",
+    "Lathe Machine",
+    "Giesecke & Devrient",
+    "Printing Machine",
+    "Reinforced Tear & Water-Resistant Paper",
+    "Ghost Image",
+    "LSI",
+    "Letter Screen Image",
+    "Secondary image for passport"
 ]
 
 # -------------------------
