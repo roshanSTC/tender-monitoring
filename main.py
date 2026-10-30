@@ -1,24 +1,24 @@
 """
 main.py
 
-Main entry point for the SPMCIL Tender Monitoring System.
+Main entry point for the SPMCIL Tender Monitoring System with Supabase Storage.
 """
-
 
 from services.active_tenders import count_active_tenders
 from scraper.scraper import TenderScraper
 from services.compare import TenderComparer
 from services.filter import TenderFilter
 from notifications.mailer import TenderMailer
-from storage.google_sheet import GoogleSheet
+from storage.supabase_storage import SupabaseStorage
 from config import logger, TENDER_SITES
-sheet = GoogleSheet()
+
+db = SupabaseStorage()
 
 
 def main():
 
     print("=" * 70)
-    print("        Tender Monitoring System")
+    print("        Tender Monitoring System (Supabase Enabled)")
     print("=" * 70)
 
     logger.info("Application Started")
@@ -36,8 +36,7 @@ def main():
         all_tenders = []
 
         print("\nScraping Websites...\n")
-        
-        
+
         for site in TENDER_SITES:
 
             try:
@@ -51,20 +50,6 @@ def main():
                 logger.info(
                     f"{site['name']} -> {len(tenders)} tenders scraped"
                 )
-                
-                # Debug only for BRBNMPL
-                if site["name"] == "BRBNMPL":
-
-                    seen = set()
-
-                    for tender in tenders:
-
-                        key = f"{tender['Source']}|{tender['Tender Number']}"
-
-                        if key in seen:
-                            print(f"DUPLICATE FROM PARSER: {key}")
-
-                        seen.add(key)
 
                 all_tenders.extend(tenders)
 
@@ -83,21 +68,21 @@ def main():
         print("---------------------------------------")
 
         # ---------------------------------------------------
-        # Create Excel if not exists
+        # Initialize Supabase Storage
         # ---------------------------------------------------
 
-        sheet.create_sheet()
+        db.init_storage()
 
         # ---------------------------------------------------
-        # Existing tenders
+        # Existing tenders from Supabase
         # ---------------------------------------------------
 
-        existing = sheet.get_existing_tenders()
+        existing = db.get_existing_tenders()
 
-        print(f"Existing Tenders : {len(existing)}")
+        print(f"Existing Tenders in Database : {len(existing)}")
 
         # ---------------------------------------------------
-        # Compare
+        # Compare (Deduplicate)
         # ---------------------------------------------------
 
         comparer = TenderComparer(existing)
@@ -106,10 +91,8 @@ def main():
 
         print(f"New Tenders : {len(new_tenders)}")
 
-        
-
         # ---------------------------------------------------
-        # Filter
+        # Filter by Keywords
         # ---------------------------------------------------
 
         filtered_tenders = filter_obj.filter_by_title(new_tenders)
@@ -117,57 +100,58 @@ def main():
         print(
             f"Keyword Matched Tenders : {len(filtered_tenders)}"
         )
-        
-        
+
         # ---------------------------------------------------
-        # Save new tenders
+        # Save new tenders to Supabase
         # ---------------------------------------------------
 
         if new_tenders:
 
-            sheet.save_to_sheet(new_tenders, existing)
+            saved_count = db.save_tenders(new_tenders, existing)
 
-            print("Excel updated successfully.")
+            print(f"Database updated successfully. ({saved_count} tenders stored)")
 
         else:
 
-            print("No new tenders found.")
-            
-            
-            
-        #active tenders-------------------- 
-        
-        active_tenders, expired_tenders = count_active_tenders(
-                all_tenders
-            )   
-        # symmary---------------------------
-        
-        summary = {
-                "status": "SUCCESS",
-                "total_websites": len(TENDER_SITES),
-                "total_scraped": len(all_tenders),
-                "active_tenders": active_tenders,
-                "existing_tenders": len(existing),
-                "new_tenders": len(new_tenders),
-                "keyword_matches": len(filtered_tenders)
-            }
-
+            print("No new tenders to store in database.")
 
         # ---------------------------------------------------
-        # Email
+        # Active tenders
+        # ---------------------------------------------------
+
+        active_tenders, expired_tenders = count_active_tenders(
+            all_tenders
+        )
+
+        # ---------------------------------------------------
+        # Summary
+        # ---------------------------------------------------
+
+        summary = {
+            "status": "SUCCESS",
+            "total_websites": len(TENDER_SITES),
+            "total_scraped": len(all_tenders),
+            "active_tenders": active_tenders,
+            "existing_tenders": len(existing),
+            "new_tenders": len(new_tenders),
+            "keyword_matches": len(filtered_tenders)
+        }
+
+        # ---------------------------------------------------
+        # Email Notifications
         # ---------------------------------------------------
 
         if filtered_tenders:
 
             mailer.send_email(filtered_tenders, summary)
 
-            print("Email sent successfully.")
+            print("Email alert sent successfully.")
 
         else:
 
             mailer.send_health_report(summary)
 
-            print("Health report sent successfully.")
+            print("Daily health report sent successfully.")
 
         logger.info("Application Finished Successfully")
 

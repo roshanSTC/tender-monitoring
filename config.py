@@ -64,7 +64,6 @@ TENDER_SITES = [
         "url": "https://www.brbnmpl.co.in/tender/",
         "type": "brbnmpl"
     },
-
     {
         "name": "BNPM India",
         "url": "https://www.bnpmindia.com/ViewActiveTender.aspx",
@@ -73,12 +72,20 @@ TENDER_SITES = [
 ]
 
 # -------------------------
-# Google Sheet
+# Supabase Configuration
+# -------------------------
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "tenders")
+
+# -------------------------
+# Google Sheet (Legacy / Backup)
 # -------------------------
 
 GOOGLE_SHEET_NAME = os.getenv("GOOGLE_SHEET_NAME")
 
-#tender keywords
+# tender keywords
 KEYWORDS = [
     "Security Thread",
     "Fibre",
@@ -95,15 +102,15 @@ KEYWORDS = [
     "Voith",
     "Bivis",
     "Lang",
+    "Slitter",
     "Shitter",
     "Sheeter",
     "PM 5",
     "PM 6",
-    "Security Thread",
     "Fibres",
     "Fibers",
     "BCLP",
-    'BCCP',
+    "BCCP",
     "HAUV",
     "Buckram",
     "Passport",
@@ -128,7 +135,7 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
 
 SMTP_SERVER = os.getenv("SMTP_SERVER")
-SMTP_PORT = int(os.getenv("SMTP_PORT"))
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 
 # -------------------------
 # Logging
