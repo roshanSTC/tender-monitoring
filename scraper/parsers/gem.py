@@ -218,12 +218,17 @@ def parse_gem(
                             closing_date = format_display_date(raw_closing)
                             pub_date = format_display_date(raw_pub)
 
-                            # Buyer department / ministry
-                            dept_name = (
-                                _val(doc.get("ba_official_details_deptName"))
-                                or _val(doc.get("ba_official_details_minName"))
-                                or "GeM Buyer"
-                            )
+                            # Buyer department / ministry ("Department Name And Address" in GeM)
+                            min_name = _val(doc.get("ba_official_details_minName"))
+                            dept_name = _val(doc.get("ba_official_details_deptName"))
+
+                            dept_parts = []
+                            if min_name and min_name.upper() != "NA":
+                                dept_parts.append(min_name)
+                            if dept_name and dept_name.upper() != "NA" and dept_name not in dept_parts:
+                                dept_parts.append(dept_name)
+
+                            issued_by = ", ".join(dept_parts) if dept_parts else (dept_name or min_name or "GeM Buyer")
 
                             # Exact word-boundary match for keyword
                             q_tokens = [re.escape(w) for w in query.strip().split()]
@@ -233,7 +238,9 @@ def parse_gem(
                             tender = {
                                 "Source": "GeM Portal",
                                 "Source URL": GEM_URL,
-                                "Unit Name": dept_name,
+                                "Unit Name": issued_by,
+                                "Issued By": issued_by,
+                                "Department Name And Address": issued_by,
                                 "Tender Number": bid_no,
                                 "Tender Title": category_name,
                                 "Matched Keyword": matched_kw,

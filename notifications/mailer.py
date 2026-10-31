@@ -74,6 +74,9 @@ class TenderMailer:
 
         for source, source_tenders in grouped.items():
 
+            is_gem = (source == "GeM Portal")
+            issued_by_th = "<th>\n                        Issued By\n                    </th>" if is_gem else ""
+
             html += f"""
 
             <h3 style="
@@ -131,6 +134,8 @@ class TenderMailer:
                         Keyword
                     </th>
 
+                    {issued_by_th}
+
                     <th>
                         Publishing Date
                     </th>
@@ -160,6 +165,11 @@ class TenderMailer:
             # ==================================================
 
             for tender in source_tenders:
+
+                issued_by_val = tender.get("Issued By") or tender.get("Unit Name") or "-"
+                issued_by_td = f"""<td>
+                        {issued_by_val}
+                    </td>""" if is_gem else ""
 
                 # --------------------------------------------------
                 # Get closing date
@@ -342,6 +352,8 @@ class TenderMailer:
                             )}
                         </b>
                     </td>
+
+                    {issued_by_td}
 
                     <td>
                         {format_display_date(tender.get(
