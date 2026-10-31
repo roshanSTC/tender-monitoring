@@ -1,12 +1,20 @@
 """
 status.py
 
-Utility functions for date parsing, tender status evaluation, and days left calculation.
+Utility functions for date parsing, tender status evaluation, days left calculation,
+and human-friendly date formatting.
 """
 
 from datetime import datetime
+import re
 
 SUPPORTED_DATE_FORMATS = [
+    # ISO 8601 formats (must be first so YYYY-MM-DD is never parsed with dayfirst=True)
+    "%Y-%m-%dT%H:%M:%SZ",
+    "%Y-%m-%dT%H:%M:%S%z",
+    "%Y-%m-%dT%H:%M:%S",
+    "%Y-%m-%dT%H:%M:%S.%fZ",
+    "%Y-%m-%dT%H:%M:%S.%f%z",
     "%Y-%m-%d %H:%M:%S",
     "%Y-%m-%d %H:%M",
     "%Y-%m-%d",
@@ -30,7 +38,7 @@ SUPPORTED_DATE_FORMATS = [
 
 def parse_date(date_str):
     """
-    Parse a date string across various Indian tender portal formats.
+    Parse a date string across various Indian tender portal formats (ISO, DD/MM/YYYY, etc.).
     Returns a datetime object or None if unparseable.
     """
     if not date_str or not isinstance(date_str, str):
@@ -40,18 +48,49 @@ def parse_date(date_str):
     if not cleaned or cleaned in ("-", "N/A", "NA"):
         return None
 
+    # Handle standard ISO-8601 with or without 'Z'
+    if "T" in cleaned:
+        try:
+            iso_cleaned = cleaned.replace("Z", "+00:00") if cleaned.endswith("Z") else cleaned
+            return datetime.fromisoformat(iso_cleaned)
+        except Exception:
+            pass
+
     for fmt in SUPPORTED_DATE_FORMATS:
         try:
             return datetime.strptime(cleaned, fmt)
         except ValueError:
             continue
 
-    # Fallback to dateutil parser if explicit formats did not match
+    # Fallback to dateutil parser
     try:
         from dateutil import parser
-        return parser.parse(cleaned, dayfirst=True)
+        # If year is first (e.g. 2026-11-09), dayfirst MUST be False
+        is_year_first = bool(re.match(r"^\d{4}[-/]", cleaned))
+        return parser.parse(cleaned, dayfirst=not is_year_first)
     except Exception:
         return None
+
+
+def format_display_date(date_val):
+    """
+    Format any date string into a user-friendly format:
+    e.g. '09-Nov-2026 07:00 PM' or '09-Nov-2026' (if no time specified).
+    """
+    if not date_val or date_val in ("-", "N/A", "NA"):
+        return "-"
+
+    if isinstance(date_val, datetime):
+        dt = date_val
+    else:
+        dt = parse_date(str(date_val))
+
+    if dt is None:
+        return str(date_val).strip()
+
+    if dt.hour == 0 and dt.minute == 0 and dt.second == 0:
+        return dt.strftime("%d-%b-%Y")
+    return dt.strftime("%d-%b-%Y %I:%M %p")
 
 
 def get_status(closing_date):

@@ -10,7 +10,8 @@ from datetime import datetime
 from typing import List, Dict, Optional, Set, Any
 import logging
 import json
-from utils.status import get_status
+import re
+from utils.status import get_status, format_display_date
 
 logger = logging.getLogger(__name__)
 
@@ -210,8 +211,12 @@ def parse_gem(
                             doc_url = f"https://bidplus.gem.gov.in/showbidDocument/{b_id}" if b_id else ""
 
                             # Dates
-                            closing_date = _val(doc.get("final_end_date_sort"))
-                            pub_date = _val(doc.get("final_start_date_sort"))
+                            raw_closing = _val(doc.get("final_end_date_sort"))
+                            raw_pub = _val(doc.get("final_start_date_sort"))
+
+                            status, days_left = get_status(raw_closing)
+                            closing_date = format_display_date(raw_closing)
+                            pub_date = format_display_date(raw_pub)
 
                             # Buyer department / ministry
                             dept_name = (
@@ -220,7 +225,10 @@ def parse_gem(
                                 or "GeM Buyer"
                             )
 
-                            status, days_left = get_status(closing_date)
+                            # Exact word-boundary match for keyword
+                            q_tokens = [re.escape(w) for w in query.strip().split()]
+                            q_pattern = r"\b" + r"\s+".join(q_tokens) + r"\b"
+                            matched_kw = query.upper() if re.search(q_pattern, category_name, re.IGNORECASE) else "-"
 
                             tender = {
                                 "Source": "GeM Portal",
@@ -228,7 +236,7 @@ def parse_gem(
                                 "Unit Name": dept_name,
                                 "Tender Number": bid_no,
                                 "Tender Title": category_name,
-                                "Matched Keyword": query.upper(),
+                                "Matched Keyword": matched_kw,
                                 "Publishing Date": pub_date,
                                 "Closing Date": closing_date,
                                 "Status": status,

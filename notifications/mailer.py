@@ -7,7 +7,7 @@ from collections import defaultdict
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from utils.status import parse_date
+from utils.status import parse_date, format_display_date
 
 from config import (
     EMAIL_SENDER,
@@ -344,17 +344,19 @@ class TenderMailer:
                     </td>
 
                     <td>
-                        {tender.get(
+                        {format_display_date(tender.get(
                             "Publishing Date",
                             ""
-                        )}
+                        ))}
+
                     </td>
 
                     <td>
-                        {tender.get(
+                        {format_display_date(tender.get(
                             "Closing Date",
                             ""
-                        )}
+                        ))}
+
                     </td>
 
                     <td align="center">
