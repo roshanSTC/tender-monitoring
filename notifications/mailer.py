@@ -411,6 +411,113 @@ class TenderMailer:
 
     # --------------------------------------------------------
 
+    # --------------------------------------------------------
+    # Corrigendum Table Builder
+    # --------------------------------------------------------
+
+    def build_corrigendum_html(self, corrigenda):
+        if not corrigenda:
+            return ""
+
+        from datetime import datetime
+        today = datetime.now().date()
+
+        html = f"""
+        <h3 style="
+            background:#C00000;
+            color:white;
+            padding:10px;
+            border-radius:4px;
+            margin-top:25px;
+            margin-bottom:8px;
+            font-family:Arial, sans-serif;
+        ">
+            🚨 Corrigendum & Date Extension Alerts
+            &nbsp;
+            <span style="
+                background:white;
+                color:#C00000;
+                padding:3px 8px;
+                border-radius:12px;
+                font-size:12px;
+                font-weight:bold;
+            ">
+                {len(corrigenda)} Update(s)
+            </span>
+        </h3>
+
+        <table border="1"
+            cellspacing="0"
+            cellpadding="6"
+            style="
+                border-collapse:collapse;
+                width:100%;
+                margin-bottom:25px;
+                font-family:Arial, sans-serif;
+                font-size:13px;
+            ">
+            <tr style="background:#FADBD8;">
+                <th>Source</th>
+                <th>Tender Number</th>
+                <th>Tender Title</th>
+                <th>Keyword</th>
+                <th>What Changed</th>
+                <th>Previous Closing Date</th>
+                <th>New Closing Date</th>
+                <th>Days Left</th>
+                <th>Corrigendum Document</th>
+                <th>Tender Document</th>
+            </tr>
+        """
+
+        for t in corrigenda:
+            closing_str = t.get("New Closing Date") or t.get("Closing Date", "")
+            closing_dt = parse_date(closing_str)
+            days_left = (closing_dt.date() - today).days if closing_dt else None
+
+            if days_left is None:
+                days_left_html = '<span style="color:#777;font-weight:bold;">-</span>'
+            elif days_left < 0:
+                days_left_html = '<span style="color:#C00000;font-weight:bold;">Expired</span>'
+            elif days_left <= 3:
+                days_left_html = f'<span style="color:#C00000;font-weight:bold;">{days_left} day(s)</span>'
+            elif days_left <= 7:
+                days_left_html = f'<span style="color:#E69138;font-weight:bold;">{days_left} day(s)</span>'
+            else:
+                days_left_html = f'<span style="color:green;font-weight:bold;">{days_left} day(s)</span>'
+
+            corr_url = t.get("Corrigendum URL", "")
+            if corr_url:
+                corr_doc_html = f'<a href="{corr_url}" target="_blank" style="color:#C00000;text-decoration:none;font-weight:bold;">Download</a>'
+            else:
+                corr_doc_html = t.get("Corrigendum") or "Notice"
+
+            doc_url = t.get("Tender Document URL", "")
+            if doc_url:
+                tender_doc_html = f'<a href="{doc_url}" target="_blank" style="color:#1155CC;text-decoration:none;font-weight:bold;">Download</a>'
+            else:
+                tender_doc_html = "-"
+
+            change_details = t.get("Change Details") or "Corrigendum Published"
+
+            html += f"""
+            <tr>
+                <td>{t.get("Source", "")}</td>
+                <td><b>{t.get("Tender Number", "")}</b></td>
+                <td>{t.get("Tender Title", "")}</td>
+                <td><b>{t.get("Matched Keyword", "-")}</b></td>
+                <td><span style="color:#C00000;font-weight:bold;">{change_details}</span></td>
+                <td>{format_display_date(t.get("Previous Closing Date", "-"))}</td>
+                <td><b style="color:green;">{format_display_date(t.get("New Closing Date", t.get("Closing Date", "")))}</b></td>
+                <td align="center">{days_left_html}</td>
+                <td align="center">{corr_doc_html}</td>
+                <td align="center">{tender_doc_html}</td>
+            </tr>
+            """
+
+        html += "</table><br/>"
+        return html
+
     def send_health_report(self, summary):
 
         try:
@@ -536,12 +643,15 @@ class TenderMailer:
             )
 
 
-    def send_email(self, tenders, summary):
+    def send_email(self, tenders, summary, corrigenda=None):
 
-        if not tenders:
+        corrigenda = corrigenda or []
+        tenders = tenders or []
+
+        if not tenders and not corrigenda:
 
             logger.info(
-                "No keyword matched tenders."
+                "No keyword matched tenders or corrigenda."
             )
 
             print(
@@ -554,10 +664,14 @@ class TenderMailer:
 
             message = MIMEMultipart("alternative")
 
-            message["Subject"] = (
-                f"🚨 SPMCIL Tender Alert "
-                f"({len(tenders)} Matching Tender(s))"
-            )
+            if corrigenda and tenders:
+                subject = f"🚨 Tender Alert ({len(tenders)} New, {len(corrigenda)} Corrigenda/Extensions)"
+            elif corrigenda:
+                subject = f"🚨 Corrigendum Alert ({len(corrigenda)} Tender Revisions/Extensions)"
+            else:
+                subject = f"🚨 SPMCIL Tender Alert ({len(tenders)} Matching Tender(s))"
+
+            message["Subject"] = subject
 
             message["From"] = self.sender
 
@@ -625,6 +739,17 @@ class TenderMailer:
                 <tr>
 
                     <th align="left">
+                        Corrigenda / Extensions
+                    </th>
+
+                    <td style="color:#C00000; font-weight:bold;">
+                        {summary.get("corrigenda_count", len(corrigenda))}
+                    </td>
+
+                </tr>
+                <tr>
+
+                    <th align="left">
                         Total Active Tenders
                     </th>
 
@@ -669,15 +794,8 @@ class TenderMailer:
             # Existing tender table
             # --------------------------------------------------
 
-            tender_html = self.build_html(
-                tenders
-            )
-
-            # Remove duplicate HTML header if build_html
-            # contains its own <html>/<body>.
-            #
-            # Better approach: use only the table portion
-            # later if you want to make the email cleaner.
+            corr_html = self.build_corrigendum_html(corrigenda) if corrigenda else ""
+            tender_html = self.build_html(tenders) if tenders else ""
 
             html = f"""
             <html>
@@ -685,6 +803,8 @@ class TenderMailer:
             <body style="font-family:Arial, sans-serif;">
 
                 {summary_html}
+
+                {corr_html}
 
                 {tender_html}
 

@@ -68,11 +68,18 @@ def parse_brbnmpl(site):
 
                 tender_url = ""
 
-                link = title_col.find("a")
-
-                if link and link.get("href"):
-                    tender_url = urljoin(site["url"], link["href"])
-
+                corr_url = ""
+                corr_text = ""
+                all_links = title_col.find_all("a")
+                for l in all_links:
+                    href = l.get("href", "")
+                    ltxt = l.get_text(" ", strip=True).lower()
+                    full_link = urljoin(site["url"], href) if href else ""
+                    if "corrigendum" in ltxt or "corrigendum" in href.lower() or "extension" in ltxt:
+                        corr_url = full_link
+                        corr_text = l.get_text(" ", strip=True) or "Corrigendum"
+                    elif not tender_url and href:
+                        tender_url = full_link
                 tenders.append({
 
                     "Source": "BRBNMPL",
@@ -84,8 +91,8 @@ def parse_brbnmpl(site):
                     "Closing Date": closing_date,
                     "Tender Document": "Download" if tender_url else "",
                     "Tender Document URL": tender_url,
-                    "Corrigendum": "",
-                    "Corrigendum URL": "",
+                    "Corrigendum": corr_text,
+                    "Corrigendum URL": corr_url,
                     "Scraped At": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 })

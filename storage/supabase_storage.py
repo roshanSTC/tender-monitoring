@@ -61,15 +61,16 @@ class SupabaseStorage:
         else:
             print("[WARN] Supabase credentials not found in .env. Falling back or pausing database sync.")
 
-    def get_existing_tenders(self) -> Set[str]:
+    def get_existing_tenders(self) -> Dict[str, Dict]:
         """
-        Fetch all existing tender identifiers (Source|Tender Number) from Supabase.
-        Uses pagination to handle tables with more than 1000 records.
+        Fetch all existing tender records from Supabase keyed by (Source|Tender Number).
+        Returns a dictionary mapping 'Source|Tender Number' -> record dict.
+        Allows O(1) membership checks ('key in existing') and state delta comparison.
         """
-        existing: Set[str] = set()
+        existing: Dict[str, Dict] = {}
 
         if not self.is_configured():
-            logger.warning("Supabase client not configured; returning empty existing set.")
+            logger.warning("Supabase client not configured; returning empty existing map.")
             return existing
 
         page_size = 1000
@@ -79,7 +80,7 @@ class SupabaseStorage:
             while True:
                 response = (
                     self.client.table(self.table_name)
-                    .select("source, tender_number")
+                    .select("source, tender_number, closing_date, corrigendum, corrigendum_url, days_left")
                     .range(start, start + page_size - 1)
                     .execute()
                 )
@@ -89,7 +90,7 @@ class SupabaseStorage:
                     source = (row.get("source") or "").strip()
                     tender_no = (row.get("tender_number") or "").strip()
                     if source and tender_no:
-                        existing.add(f"{source}|{tender_no}")
+                        existing[f"{source}|{tender_no}"] = row
 
                 if len(rows) < page_size:
                     break
@@ -103,6 +104,7 @@ class SupabaseStorage:
         except Exception as e:
             logger.exception(f"Failed to fetch existing tenders from Supabase: {e}")
             print(f"Error reading existing tenders from Supabase: {e}")
+            return existing
             return existing
 
     def _format_record(self, tender: Dict) -> Dict:
@@ -176,6 +178,37 @@ class SupabaseStorage:
 
         print(f"Successfully saved {inserted_count} tenders to Supabase.")
         return inserted_count
+
+    def upsert_tenders(self, tenders: List[Dict]) -> int:
+        """
+        Upsert updated tenders (e.g. with new corrigenda or date extensions) into Supabase.
+        """
+        if not self.is_configured():
+            logger.error("Cannot upsert to Supabase: client is not configured.")
+            return 0
+
+        if not tenders:
+            return 0
+
+        records_to_upsert = [self._format_record(t) for t in tenders]
+        batch_size = 100
+        updated_count = 0
+
+        for i in range(0, len(records_to_upsert), batch_size):
+            batch = records_to_upsert[i : i + batch_size]
+            try:
+                self.client.table(self.table_name).upsert(
+                    batch,
+                    on_conflict="source,tender_number"
+                ).execute()
+                updated_count += len(batch)
+                logger.info(f"Upserted batch of {len(batch)} updated tenders to Supabase.")
+            except Exception as e:
+                logger.exception(f"Failed to upsert batch {i // batch_size + 1} into Supabase: {e}")
+                print(f"Error upserting batch into Supabase: {e}")
+
+        print(f"Successfully updated {updated_count} tender records in Supabase.")
+        return updated_count
 
     # Backwards-compatible alias for existing code calling save_to_sheet
     def save_to_sheet(self, tenders: List[Dict], existing: Optional[Set[str]] = None) -> int:

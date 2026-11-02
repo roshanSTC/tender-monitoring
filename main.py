@@ -82,27 +82,33 @@ def main():
         print(f"Existing Tenders in Database : {len(existing)}")
 
         # ---------------------------------------------------
-        # Compare (Deduplicate)
+        # Compare (Deduplicate & Corrigendum Detection)
         # ---------------------------------------------------
 
         comparer = TenderComparer(existing)
 
         new_tenders = comparer.get_new_tenders(all_tenders)
+        corrigendum_tenders = comparer.get_corrigendum_tenders(all_tenders)
 
         print(f"New Tenders : {len(new_tenders)}")
+        print(f"Corrigenda / Extended Tenders : {len(corrigendum_tenders)}")
 
         # ---------------------------------------------------
         # Filter by Keywords
         # ---------------------------------------------------
 
         filtered_tenders = filter_obj.filter_by_title(new_tenders)
+        filtered_corrigenda = filter_obj.filter_by_title(corrigendum_tenders)
 
         print(
-            f"Keyword Matched Tenders : {len(filtered_tenders)}"
+            f"Keyword Matched New Tenders : {len(filtered_tenders)}"
+        )
+        print(
+            f"Keyword Matched Corrigenda : {len(filtered_corrigenda)}"
         )
 
         # ---------------------------------------------------
-        # Save new tenders to Supabase
+        # Save new tenders and update corrigenda in Supabase
         # ---------------------------------------------------
 
         if new_tenders:
@@ -114,6 +120,12 @@ def main():
         else:
 
             print("No new tenders to store in database.")
+
+        if corrigendum_tenders:
+
+            updated_count = db.upsert_tenders(corrigendum_tenders)
+
+            print(f"Database corrigenda updated. ({updated_count} tender records refreshed)")
 
         # ---------------------------------------------------
         # Active tenders
@@ -134,16 +146,17 @@ def main():
             "active_tenders": active_tenders,
             "existing_tenders": len(existing),
             "new_tenders": len(new_tenders),
-            "keyword_matches": len(filtered_tenders)
+            "corrigenda_count": len(filtered_corrigenda),
+            "keyword_matches": len(filtered_tenders) + len(filtered_corrigenda)
         }
 
         # ---------------------------------------------------
         # Email Notifications
         # ---------------------------------------------------
 
-        if filtered_tenders:
+        if filtered_tenders or filtered_corrigenda:
 
-            mailer.send_email(filtered_tenders, summary)
+            mailer.send_email(filtered_tenders, summary, corrigenda=filtered_corrigenda)
 
             print("Email alert sent successfully.")
 

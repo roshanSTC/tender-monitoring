@@ -73,6 +73,16 @@ TENDER_SITES = [
         "name": "GeM Portal",
         "url": "https://bidplus.gem.gov.in/all-bids",
         "type": "gem"
+    },
+    {
+        "name": "eProcure Portal (CPPP)",
+        "url": "https://eprocure.gov.in/eprocure/app",
+        "type": "gepnic"
+    },
+    {
+        "name": "eTenders Portal",
+        "url": "https://etenders.gov.in/eprocure/app",
+        "type": "gepnic"
     }
 ]
 

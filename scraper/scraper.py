@@ -15,6 +15,7 @@ from scraper.parsers.spmcil.corporate import parse_corporate_table
 from scraper.parsers.spmcil.noida import parse_noida_page
 from scraper.parsers.unit_sites import parse_unit_table
 from scraper.parsers.gem import parse_gem
+from scraper.parsers.gepnic import parse_gepnic
 from utils.status import get_status
 
 
@@ -62,7 +63,9 @@ class TenderScraper:
         site_name = site.get("name", "")
 
         # Sites with dedicated self-fetching parsers
-        if site_type == "gem":
+        if site_type == "gepnic":
+            tenders = parse_gepnic(site)
+        elif site_type == "gem":
             tenders = parse_gem(site)
         elif site_type == "brbnmpl":
             tenders = parse_brbnmpl(site)
