@@ -6,7 +6,7 @@ Interacts with Supabase using the official Supabase Python Client (PostgREST API
 """
 
 from datetime import datetime
-from typing import List, Dict, Set, Optional
+from typing import List, Dict, Set, Optional, Union, Any
 from supabase import create_client, Client
 from config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_TABLE, logger
 
@@ -128,7 +128,7 @@ class SupabaseStorage:
             "updated_at": datetime.utcnow().isoformat(),
         }
 
-    def save_tenders(self, tenders: List[Dict], existing: Optional[Set[str]] = None) -> int:
+    def save_tenders(self, tenders: List[Dict], existing: Optional[Union[Set[str], Dict[str, Any]]] = None) -> int:
         """
         Save/Upsert new tenders into the Supabase table in batches.
         Updates the `existing` set in place.
@@ -151,9 +151,13 @@ class SupabaseStorage:
             if existing is not None and key in existing:
                 continue
 
-            records_to_insert.append(self._format_record(tender))
+            record = self._format_record(tender)
+            records_to_insert.append(record)
             if existing is not None:
-                existing.add(key)
+                if isinstance(existing, set):
+                    existing.add(key)
+                elif isinstance(existing, dict):
+                    existing[key] = record
 
         if not records_to_insert:
             print("All provided tenders already exist in database.")
@@ -211,7 +215,7 @@ class SupabaseStorage:
         return updated_count
 
     # Backwards-compatible alias for existing code calling save_to_sheet
-    def save_to_sheet(self, tenders: List[Dict], existing: Optional[Set[str]] = None) -> int:
+    def save_to_sheet(self, tenders: List[Dict], existing: Optional[Union[Set[str], Dict[str, Any]]] = None) -> int:
         """Alias for save_tenders to provide drop-in compatibility with GoogleSheet."""
         return self.save_tenders(tenders, existing)
 
