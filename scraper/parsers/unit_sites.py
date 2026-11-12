@@ -4,7 +4,7 @@ from config import logger
 
 from bs4 import BeautifulSoup
 
-from utils.status import get_status
+from utils.status import get_status, parse_date
 
 
 def parse_unit_table(html, site):
@@ -18,7 +18,7 @@ def parse_unit_table(html, site):
 
         rows = table.find_all("tr")
 
-        tenders = []
+        seen_tenders = {}
 
         for row in rows[1:]:
 
@@ -26,6 +26,10 @@ def parse_unit_table(html, site):
 
             # Skip invalid rows
             if len(cols) < 7:
+                continue
+
+            tender_no = cols[2].get_text(" ", strip=True)
+            if not tender_no:
                 continue
 
             # ---------------------------------
@@ -68,7 +72,7 @@ def parse_unit_table(html, site):
 
                 "Unit Name": cols[1].get_text(" ", strip=True),
 
-                "Tender Number": cols[2].get_text(" ", strip=True),
+                "Tender Number": tender_no,
 
                 "Tender Title": cols[3].get_text(" ", strip=True),
 
@@ -92,7 +96,17 @@ def parse_unit_table(html, site):
 
             }
 
-            tenders.append(tender)
+            if tender_no in seen_tenders:
+                existing_entry = seen_tenders[tender_no]
+                dt_new = parse_date(tender["Closing Date"])
+                dt_old = parse_date(existing_entry["Closing Date"])
+                if (dt_new and dt_old and dt_new > dt_old) or (corr_url and not existing_entry.get("Corrigendum URL")):
+                    seen_tenders[tender_no] = tender
+                continue
+
+            seen_tenders[tender_no] = tender
+
+        tenders = list(seen_tenders.values())
 
         logger.info(
             f"{site['name']} -> Parsed {len(tenders)} tenders"

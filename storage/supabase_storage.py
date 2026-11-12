@@ -131,7 +131,7 @@ class SupabaseStorage:
     def save_tenders(self, tenders: List[Dict], existing: Optional[Union[Set[str], Dict[str, Any]]] = None) -> int:
         """
         Save/Upsert new tenders into the Supabase table in batches.
-        Updates the `existing` set in place.
+        Updates the `existing` set/dict in place.
         """
         if not self.is_configured():
             logger.error("Cannot save to Supabase: client is not configured.")
@@ -142,17 +142,28 @@ class SupabaseStorage:
             print("No tenders to save.")
             return 0
 
+        # Deduplicate within this batch by (source, tender_number) so Postgres
+        # never fails with "ON CONFLICT DO UPDATE command cannot affect row a second time"
         records_to_insert = []
+        batch_seen = set()
+
         for tender in tenders:
-            source = tender.get("Source") or tender.get("source") or ""
-            tender_no = tender.get("Tender Number") or tender.get("tender_number") or ""
+            source = (tender.get("Source") or tender.get("source") or "").strip()
+            tender_no = (tender.get("Tender Number") or tender.get("tender_number") or "").strip()
+            if not source or not tender_no:
+                continue
+
             key = f"{source}|{tender_no}"
 
             if existing is not None and key in existing:
                 continue
+            if key in batch_seen:
+                continue
 
+            batch_seen.add(key)
             record = self._format_record(tender)
             records_to_insert.append(record)
+
             if existing is not None:
                 if isinstance(existing, set):
                     existing.add(key)
@@ -183,9 +194,11 @@ class SupabaseStorage:
         print(f"Successfully saved {inserted_count} tenders to Supabase.")
         return inserted_count
 
-    def upsert_tenders(self, tenders: List[Dict]) -> int:
+    def upsert_tenders(self, tenders: List[Dict], existing: Optional[Dict[str, Any]] = None) -> int:
         """
         Upsert updated tenders (e.g. with new corrigenda or date extensions) into Supabase.
+        Deduplicates records in the batch by (source, tender_number) to prevent Postgres
+        ON CONFLICT DO UPDATE errors.
         """
         if not self.is_configured():
             logger.error("Cannot upsert to Supabase: client is not configured.")
@@ -194,7 +207,23 @@ class SupabaseStorage:
         if not tenders:
             return 0
 
-        records_to_upsert = [self._format_record(t) for t in tenders]
+        # Deduplicate by unique key (source, tender_number)
+        unique_records = {}
+        for t in tenders:
+            rec = self._format_record(t)
+            src = rec.get("source", "").strip()
+            num = rec.get("tender_number", "").strip()
+            if not src or not num:
+                continue
+            key = f"{src}|{num}"
+            unique_records[key] = rec
+            if existing is not None and isinstance(existing, dict):
+                existing[key] = rec
+
+        records_to_upsert = list(unique_records.values())
+        if not records_to_upsert:
+            return 0
+
         batch_size = 100
         updated_count = 0
 

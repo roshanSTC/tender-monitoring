@@ -123,7 +123,7 @@ def main():
 
         if corrigendum_tenders:
 
-            updated_count = db.upsert_tenders(corrigendum_tenders)
+            updated_count = db.upsert_tenders(corrigendum_tenders, existing)
 
             print(f"Database corrigenda updated. ({updated_count} tender records refreshed)")
 

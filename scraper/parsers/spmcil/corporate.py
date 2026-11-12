@@ -4,12 +4,10 @@ from config import logger
 
 from bs4 import BeautifulSoup
 
-from utils.status import get_status
+from utils.status import get_status, parse_date
 
 
-
-
-def  parse_corporate_table( html):
+def parse_corporate_table(html):
 
         soup = BeautifulSoup(html, "lxml")
 
@@ -20,7 +18,7 @@ def  parse_corporate_table( html):
 
         rows = table.find_all("tr")
 
-        tenders = []
+        seen_tenders = {}
 
         base_url = "https://www.spmcil.com"
 
@@ -29,6 +27,10 @@ def  parse_corporate_table( html):
             cols = row.find_all("td")
 
             if len(cols) < 8:
+                continue
+
+            tender_no = cols[2].get_text(strip=True)
+            if not tender_no:
                 continue
 
             # -----------------------------
@@ -81,7 +83,7 @@ def  parse_corporate_table( html):
 
                 "Unit Name": cols[1].get_text(" ", strip=True),
 
-                "Tender Number": cols[2].get_text(strip=True),
+                "Tender Number": tender_no,
 
                 "Tender Title": cols[3].get_text(
                     " ",
@@ -115,8 +117,17 @@ def  parse_corporate_table( html):
                 ),
             }
 
-            tenders.append(tender)
+            if tender_no in seen_tenders:
+                existing_entry = seen_tenders[tender_no]
+                dt_new = parse_date(tender["Closing Date"])
+                dt_old = parse_date(existing_entry["Closing Date"])
+                if (dt_new and dt_old and dt_new > dt_old) or (corrigendum_url and not existing_entry.get("Corrigendum URL")):
+                    seen_tenders[tender_no] = tender
+                continue
 
+            seen_tenders[tender_no] = tender
+
+        tenders = list(seen_tenders.values())
         logger.info(f"Fetched {len(tenders)} tenders")
 
         return tenders
