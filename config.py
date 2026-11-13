@@ -137,7 +137,6 @@ KEYWORDS = [
     "Pasaban",
     "Komsco",
     "Cotton Comber",
-    "UPS",
     "PVA",
     "Polyvinyl Alcohol",
     "Schuler",
@@ -161,7 +160,7 @@ KEYWORDS = [
     "Ghost Image",
     "LSI",
     "Letter Screen Image",
-    "Secondary image for passport"
+    "Secondary image for passport",
 ]
 
 # -------------------------

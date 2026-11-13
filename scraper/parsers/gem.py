@@ -52,7 +52,6 @@ DEFAULT_GEM_QUERIES = [
     "Pasaban",
     "Komsco",
     "Cotton Comber",
-    "UPS",
     "PVA",
     "Polyvinyl Alcohol",
     "Schuler",
