@@ -80,7 +80,7 @@ class SupabaseStorage:
             while True:
                 response = (
                     self.client.table(self.table_name)
-                    .select("source, tender_number, closing_date, corrigendum, corrigendum_url, days_left")
+                    .select("source, tender_number, unit_name, closing_date, corrigendum, corrigendum_url, days_left")
                     .range(start, start + page_size - 1)
                     .execute()
                 )

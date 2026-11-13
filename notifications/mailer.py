@@ -74,8 +74,11 @@ class TenderMailer:
 
         for source, source_tenders in grouped.items():
 
-            is_gem = (source == "GeM Portal")
-            issued_by_th = "<th>\n                        Issued By\n                    </th>" if is_gem else ""
+            show_issued_by = (
+                source in {"GeM Portal", "eProcure Portal (CPPP)", "eTenders Portal"}
+                or any(k in source.lower() for k in ["gem", "eprocure", "etender"])
+            )
+            issued_by_th = "<th>\n                        Issued By\n                    </th>" if show_issued_by else ""
 
             html += f"""
 
@@ -169,7 +172,7 @@ class TenderMailer:
                 issued_by_val = tender.get("Issued By") or tender.get("Unit Name") or "-"
                 issued_by_td = f"""<td>
                         {issued_by_val}
-                    </td>""" if is_gem else ""
+                    </td>""" if show_issued_by else ""
 
                 # --------------------------------------------------
                 # Get closing date
@@ -458,6 +461,7 @@ class TenderMailer:
             ">
             <tr style="background:#FADBD8;">
                 <th>Source</th>
+                <th>Issued By</th>
                 <th>Tender Number</th>
                 <th>Tender Title</th>
                 <th>Keyword</th>
@@ -499,10 +503,12 @@ class TenderMailer:
                 tender_doc_html = "-"
 
             change_details = t.get("Change Details") or "Corrigendum Published"
+            issued_by_val = t.get("Issued By") or t.get("Unit Name") or "-"
 
             html += f"""
             <tr>
                 <td>{t.get("Source", "")}</td>
+                <td>{issued_by_val}</td>
                 <td><b>{t.get("Tender Number", "")}</b></td>
                 <td>{t.get("Tender Title", "")}</td>
                 <td><b>{t.get("Matched Keyword", "-")}</b></td>
