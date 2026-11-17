@@ -422,24 +422,28 @@ class TenderMailer:
         if not corrigenda:
             return ""
 
+        from collections import defaultdict
         from datetime import datetime
+        import re
+
         today = datetime.now().date()
+
+        grouped_corrs = defaultdict(list)
+        for t in corrigenda:
+            grouped_corrs[t.get("Source", "Unknown")].append(t)
 
         html = f"""
         <h3 style="
-            background:#C00000;
-            color:white;
-            padding:10px;
-            border-radius:4px;
-            margin-top:25px;
-            margin-bottom:8px;
+            color:#C00000;
             font-family:Arial, sans-serif;
+            margin-top:25px;
+            margin-bottom:10px;
         ">
-            🚨 Corrigendum & Date Extension Alerts
+            🚨 Corrigendum
             &nbsp;
             <span style="
-                background:white;
-                color:#C00000;
+                background:#C00000;
+                color:white;
                 padding:3px 8px;
                 border-radius:12px;
                 font-size:12px;
@@ -448,80 +452,118 @@ class TenderMailer:
                 {len(corrigenda)} Update(s)
             </span>
         </h3>
-
-        <table border="1"
-            cellspacing="0"
-            cellpadding="6"
-            style="
-                border-collapse:collapse;
-                width:100%;
-                margin-bottom:25px;
-                font-family:Arial, sans-serif;
-                font-size:13px;
-            ">
-            <tr style="background:#FADBD8;">
-                <th>Source</th>
-                <th>Issued By</th>
-                <th>Tender Number</th>
-                <th>Tender Title</th>
-                <th>Keyword</th>
-                <th>What Changed</th>
-                <th>Previous Closing Date</th>
-                <th>New Closing Date</th>
-                <th>Days Left</th>
-                <th>Corrigendum Document</th>
-                <th>Tender Document</th>
-            </tr>
         """
 
-        for t in corrigenda:
-            closing_str = t.get("New Closing Date") or t.get("Closing Date", "")
-            closing_dt = parse_date(closing_str)
-            days_left = (closing_dt.date() - today).days if closing_dt else None
+        for source, source_corrs in grouped_corrs.items():
 
-            if days_left is None:
-                days_left_html = '<span style="color:#777;font-weight:bold;">-</span>'
-            elif days_left < 0:
-                days_left_html = '<span style="color:#C00000;font-weight:bold;">Expired</span>'
-            elif days_left <= 3:
-                days_left_html = f'<span style="color:#C00000;font-weight:bold;">{days_left} day(s)</span>'
-            elif days_left <= 7:
-                days_left_html = f'<span style="color:#E69138;font-weight:bold;">{days_left} day(s)</span>'
-            else:
-                days_left_html = f'<span style="color:green;font-weight:bold;">{days_left} day(s)</span>'
-
-            corr_url = t.get("Corrigendum URL", "")
-            if corr_url:
-                corr_doc_html = f'<a href="{corr_url}" target="_blank" style="color:#C00000;text-decoration:none;font-weight:bold;">Download</a>'
-            else:
-                corr_doc_html = t.get("Corrigendum") or "Notice"
-
-            doc_url = t.get("Tender Document URL", "")
-            if doc_url:
-                tender_doc_html = f'<a href="{doc_url}" target="_blank" style="color:#1155CC;text-decoration:none;font-weight:bold;">Download</a>'
-            else:
-                tender_doc_html = "-"
-
-            change_details = t.get("Change Details") or "Corrigendum Published"
-            issued_by_val = t.get("Issued By") or t.get("Unit Name") or "-"
+            show_issued_by = (
+                source in {"GeM Portal", "eProcure Portal (CPPP)", "eTenders Portal"}
+                or any(k in source.lower() for k in ["gem", "eprocure", "etender"])
+            )
+            issued_by_th = "<th>\n                        Issued By\n                    </th>" if show_issued_by else ""
 
             html += f"""
-            <tr>
-                <td>{t.get("Source", "")}</td>
-                <td>{issued_by_val}</td>
-                <td><b>{t.get("Tender Number", "")}</b></td>
-                <td>{t.get("Tender Title", "")}</td>
-                <td><b>{t.get("Matched Keyword", "-")}</b></td>
-                <td><span style="color:#C00000;font-weight:bold;">{change_details}</span></td>
-                <td>{format_display_date(t.get("Previous Closing Date", "-"))}</td>
-                <td><b style="color:green;">{format_display_date(t.get("New Closing Date", t.get("Closing Date", "")))}</b></td>
-                <td align="center">{days_left_html}</td>
-                <td align="center">{corr_doc_html}</td>
-                <td align="center">{tender_doc_html}</td>
-            </tr>
+            <h3 style="
+                background:#C00000;
+                color:white;
+                padding:10px;
+                border-radius:4px;
+                margin-top:20px;
+                margin-bottom:8px;
+                font-family:Arial, sans-serif;
+            ">
+                🏢 {source}
+                &nbsp;
+                <span style="
+                    background:white;
+                    color:#C00000;
+                    padding:3px 8px;
+                    border-radius:12px;
+                    font-size:12px;
+                    font-weight:bold;
+                ">
+                    {len(source_corrs)} Update(s)
+                </span>
+            </h3>
+
+            <table border="1"
+                cellspacing="0"
+                cellpadding="6"
+                style="
+                    border-collapse:collapse;
+                    width:100%;
+                    margin-bottom:25px;
+                    font-family:Arial, sans-serif;
+                    font-size:13px;
+                ">
+                <tr style="background:#FADBD8;">
+                    <th>Tender Number</th>
+                    <th>Tender Title</th>
+                    <th>Keyword</th>
+                    {issued_by_th}
+                    <th>What Changed</th>
+                    <th>Previous Closing Date</th>
+                    <th>New Closing Date</th>
+                    <th>Days Left</th>
+                    <th>Tender Document</th>
+                    <th>Corrigendum</th>
+                </tr>
             """
 
-        html += "</table><br/>"
+            for t in source_corrs:
+                closing_str = t.get("New Closing Date") or t.get("Closing Date", "")
+                closing_dt = parse_date(closing_str)
+                days_left = (closing_dt.date() - today).days if closing_dt else None
+
+                if days_left is None:
+                    days_left_html = '<span style="color:#777;font-weight:bold;">-</span>'
+                elif days_left < 0:
+                    days_left_html = '<span style="color:#C00000;font-weight:bold;">Expired</span>'
+                elif days_left <= 3:
+                    days_left_html = f'<span style="color:#C00000;font-weight:bold;">{days_left} day(s)</span>'
+                elif days_left <= 7:
+                    days_left_html = f'<span style="color:#E69138;font-weight:bold;">{days_left} day(s)</span>'
+                else:
+                    days_left_html = f'<span style="color:green;font-weight:bold;">{days_left} day(s)</span>'
+
+                corr_url = t.get("Corrigendum URL", "")
+                if corr_url:
+                    corr_doc_html = f'<a href="{corr_url}" target="_blank" style="color:#C00000;text-decoration:none;font-weight:bold;">Download</a>'
+                else:
+                    corr_doc_html = t.get("Corrigendum") or "Notice"
+
+                doc_url = t.get("Tender Document URL", "")
+                if doc_url:
+                    tender_doc_html = f'<a href="{doc_url}" target="_blank" style="color:#1155CC;text-decoration:none;font-weight:bold;">Download</a>'
+                else:
+                    tender_doc_html = "-"
+
+                raw_change = t.get("Change Details") or "Corrigendum Published"
+                # Remove any (+X days) or (-X days) pattern
+                change_details = re.sub(r"\s*\([+-]?\d+\s*days?\)", "", raw_change, flags=re.IGNORECASE).strip()
+
+                issued_by_val = t.get("Issued By") or t.get("Unit Name") or "-"
+                issued_by_td = f"""<td>
+                        {issued_by_val}
+                    </td>""" if show_issued_by else ""
+
+                html += f"""
+                <tr>
+                    <td><b>{t.get("Tender Number", "")}</b></td>
+                    <td>{t.get("Tender Title", "")}</td>
+                    <td><b>{t.get("Matched Keyword", "-")}</b></td>
+                    {issued_by_td}
+                    <td><span style="color:#C00000;font-weight:bold;">{change_details}</span></td>
+                    <td>{format_display_date(t.get("Previous Closing Date", "-"))}</td>
+                    <td><b style="color:green;">{format_display_date(t.get("New Closing Date", t.get("Closing Date", "")))}</b></td>
+                    <td align="center">{days_left_html}</td>
+                    <td align="center">{tender_doc_html}</td>
+                    <td align="center">{corr_doc_html}</td>
+                </tr>
+                """
+
+            html += "</table><br/>"
+
         return html
 
     def send_health_report(self, summary):
@@ -745,7 +787,7 @@ class TenderMailer:
                 <tr>
 
                     <th align="left">
-                        Corrigenda / Extensions
+                        Corrigendum
                     </th>
 
                     <td style="color:#C00000; font-weight:bold;">

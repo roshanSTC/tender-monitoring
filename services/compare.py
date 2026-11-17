@@ -112,13 +112,13 @@ class TenderComparer:
                     if diff_seconds > 0:
                         is_changed = True
                         if diff_days > 0:
-                            change_reasons.append(f"Closing Date Extended (+{diff_days} days)")
+                            change_reasons.append("Closing Date Extended")
                         else:
                             change_reasons.append("Closing Time Extended")
                     elif diff_seconds < 0:
                         is_changed = True
                         if diff_days < 0:
-                            change_reasons.append(f"Closing Date Preponed ({diff_days} days)")
+                            change_reasons.append("Closing Date Preponed")
                         else:
                             change_reasons.append("Closing Time Revised")
                 elif prev_close.strip() != new_close.strip():
